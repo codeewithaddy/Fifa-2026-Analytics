@@ -6,6 +6,8 @@ Comparing actual goals against model projections.
 import streamlit as st
 import pandas as pd
 import numpy as np
+import base64
+import pathlib
 
 from utils.data_loader import inject_css, load_outfield, performance_label
 from utils.ml_model    import build_xg_model
@@ -21,19 +23,32 @@ st.set_page_config(
 )
 inject_css()
 
-# ── Header ────────────────────────────────────────────────────
-st.markdown("""
-<div class="page-hero">
-  <div class="ph-eyebrow">SHOOTING ANALYSIS</div>
-  <h1>Shot Quality &amp; Expected Goals</h1>
-  <p class="ph-desc">
-    This analysis compares the quality of chances each player gets (Expected Goals / xG) against what they actually score.
-  </p>
+# ── Header with Banner Image ──────────────────────────────────
+bg_path = "assets/striker_shooting.png"
+bg_tag = ""
+try:
+    bg_bytes = pathlib.Path(bg_path).read_bytes()
+    bg_b64 = base64.b64encode(bg_bytes).decode()
+    bg_tag = f'<img class="bg" src="data:image/png;base64,{bg_b64}" alt="Striker Shooting">'
+except Exception:
+    pass
+
+st.markdown(f"""
+<div class="premium-hero">
+  {bg_tag}
+  <div class="overlay" style="background: linear-gradient(90deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.7) 50%, rgba(15,23,42,0.2) 100%);"></div>
+  <div class="hero-content">
+    <div class="eyebrow" style="color:#e01a22; font-weight:800; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:0.4rem;">SHOOTING ANALYSIS</div>
+    <h1 style="color:#ffffff !important;">Shot Quality &amp; Expected Goals</h1>
+    <p class="hero-sub" style="color:rgba(255,255,255,0.8);">
+      This analysis compares the quality of chances each player gets (Expected Goals / xG) against what they actually score.
+    </p>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
 # ── Methodology Explainer ─────────────────────────────────────
-with st.expander("📖 Explanation of Expected Goals (xG)"):
+with st.expander("Explanation of Expected Goals (xG)"):
     st.markdown("""
     **Expected Goals (xG)** measures the quality of a shot based on features like position, accuracy, and shot volume.
     - **Actual Goals > xG**: Player is scoring from low-quality positions or converting difficult chances (clinical).
@@ -65,7 +80,7 @@ with col_ctrl2:
 with col_ctrl3:
     st.markdown(f"""
     <div style="padding:.5rem 0; font-size:.8rem; color:#64748b;">
-      Updated: {time_since_update()}
+      {time_since_update()}
     </div>
     """, unsafe_allow_html=True)
 
@@ -116,9 +131,9 @@ st.markdown(f"""
 
 # ── Tabs ──────────────────────────────────────────────────────
 tab_over, tab_under, tab_data = st.tabs([
-    "🟢 Over-performing Players",
-    "🔴 Under-performing Players",
-    "📋 Complete Dataset"
+    "Over-performing Players",
+    "Under-performing Players",
+    "Complete Dataset"
 ])
 
 with tab_over:
@@ -128,32 +143,37 @@ with tab_over:
     </div>
     """, unsafe_allow_html=True)
 
-    over_players = fdf[fdf["delta_g"] > 0].nlargest(8, "delta_g")
-    for _, row in over_players.iterrows():
+    over_players = fdf[fdf["delta_g"] > 0].nlargest(12, "delta_g")
+    
+    # Display in 2 columns to fill screen width
+    cols = st.columns(2)
+    for idx, row in enumerate(over_players.iterrows()):
+        row = row[1]
         p_name = row["player"]
         p_team = row["team"]
         p_actual = int(row["goals"])
         p_xg = row["xG"]
         p_delta = row["delta_g"]
-
-        st.markdown(f"""
-        <div class="row-item">
-          <div class="row-item-main">
-            <span style="font-size:1.5rem;">{flag(p_team)}</span>
-            <div>
-              <div class="row-item-name">{p_name}</div>
-              <div class="row-item-meta">{p_team} · {row['position']} · {int(row['shots'])} shots</div>
+        
+        with cols[idx % 2]:
+            st.markdown(f"""
+            <div class="row-item">
+              <div class="row-item-main">
+                <span style="font-size:1.5rem;">{flag(p_team)}</span>
+                <div>
+                  <div class="row-item-name">{p_name}</div>
+                  <div class="row-item-meta">{p_team} · {row['position']} · {int(row['shots'])} shots</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:1.5rem;">
+                <div style="text-align:right;">
+                  <div style="font-size:0.75rem; color:#64748b;">Goals / xG</div>
+                  <div style="font-size:0.9rem; font-weight:600;">{p_actual} goals / {p_xg:.1f} xG</div>
+                </div>
+                <div class="row-item-value" style="color:#048a5f;">+{p_delta:.1f}</div>
+              </div>
             </div>
-          </div>
-          <div style="display:flex; align-items:center; gap:1.5rem;">
-            <div style="text-align:right;">
-              <div style="font-size:0.75rem; color:#64748b;">Goals / xG</div>
-              <div style="font-size:0.9rem; font-weight:600;">{p_actual} goals / {p_xg:.1f} xG</div>
-            </div>
-            <div class="row-item-value" style="color:#048a5f;">+{p_delta:.1f}</div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.plotly_chart(delta_bar(fdf, top_n=10, mode="over"), width='stretch')
@@ -165,32 +185,37 @@ with tab_under:
     </div>
     """, unsafe_allow_html=True)
 
-    under_players = fdf[fdf["delta_g"] < 0].nsmallest(8, "delta_g")
-    for _, row in under_players.iterrows():
+    under_players = fdf[fdf["delta_g"] < 0].nsmallest(12, "delta_g")
+    
+    # Display in 2 columns to fill screen width
+    cols = st.columns(2)
+    for idx, row in enumerate(under_players.iterrows()):
+        row = row[1]
         p_name = row["player"]
         p_team = row["team"]
         p_actual = int(row["goals"])
         p_xg = row["xG"]
         p_delta = row["delta_g"]
 
-        st.markdown(f"""
-        <div class="row-item">
-          <div class="row-item-main">
-            <span style="font-size:1.5rem;">{flag(p_team)}</span>
-            <div>
-              <div class="row-item-name">{p_name}</div>
-              <div class="row-item-meta">{p_team} · {row['position']} · {int(row['shots'])} shots</div>
+        with cols[idx % 2]:
+            st.markdown(f"""
+            <div class="row-item">
+              <div class="row-item-main">
+                <span style="font-size:1.5rem;">{flag(p_team)}</span>
+                <div>
+                  <div class="row-item-name">{p_name}</div>
+                  <div class="row-item-meta">{p_team} · {row['position']} · {int(row['shots'])} shots</div>
+                </div>
+              </div>
+              <div style="display:flex; align-items:center; gap:1.5rem;">
+                <div style="text-align:right;">
+                  <div style="font-size:0.75rem; color:#64748b;">Goals / xG</div>
+                  <div style="font-size:0.9rem; font-weight:600;">{p_actual} goals / {p_xg:.1f} xG</div>
+                </div>
+                <div class="row-item-value" style="color:#e01a22;">{p_delta:.1f}</div>
+              </div>
             </div>
-          </div>
-          <div style="display:flex; align-items:center; gap:1.5rem;">
-            <div style="text-align:right;">
-              <div style="font-size:0.75rem; color:#64748b;">Goals / xG</div>
-              <div style="font-size:0.9rem; font-weight:600;">{p_actual} goals / {p_xg:.1f} xG</div>
-            </div>
-            <div class="row-item-value" style="color:#e01a22;">{p_delta:.1f}</div>
-          </div>
-        </div>
-        """, unsafe_allow_html=True)
+            """, unsafe_allow_html=True)
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.plotly_chart(delta_bar(fdf, top_n=10, mode="under"), width='stretch')
@@ -216,7 +241,7 @@ with tab_data:
 # ── Footer ────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="site-footer">
-  <div class="site-footer-brand">FIFA WC 2026 Stats</div>
-  <div>Model Type: Positive Linear Regression Model · Features: shots, minutes</div>
+  <div class="site-footer-brand">FIFA WC 2026 Stats Centre</div>
+  <div>Dataset: FIFA World Cup 2026 Player Stats by Swapnil Tripathi (Kaggle)</div>
 </div>
 """, unsafe_allow_html=True)

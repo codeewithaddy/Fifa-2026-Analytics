@@ -6,6 +6,8 @@ Aggregating player stats by team to profile playstyles.
 import streamlit as st
 import pandas as pd
 import numpy as np
+import base64
+import pathlib
 
 from utils.data_loader import inject_css, load_team_stats, load_outfield, team_style_label
 from utils.charts      import team_dna_scatter
@@ -20,14 +22,27 @@ st.set_page_config(
 )
 inject_css()
 
-# ── Header ────────────────────────────────────────────────────
-st.markdown("""
-<div class="page-hero">
-  <div class="ph-eyebrow">TEAM PROFILES</div>
-  <h1>Team Performance Analysis</h1>
-  <p class="ph-desc">
-    Aggregated player performance profiles by team to evaluate shot volume, conversion rates, and defensive metrics.
-  </p>
+# ── Header with Banner Image ──────────────────────────────────
+bg_path = "assets/fans_celebration.png"
+bg_tag = ""
+try:
+    bg_bytes = pathlib.Path(bg_path).read_bytes()
+    bg_b64 = base64.b64encode(bg_bytes).decode()
+    bg_tag = f'<img class="bg" src="data:image/png;base64,{bg_b64}" alt="Fans Celebration">'
+except Exception:
+    pass
+
+st.markdown(f"""
+<div class="premium-hero">
+  {bg_tag}
+  <div class="overlay" style="background: linear-gradient(90deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.7) 50%, rgba(15,23,42,0.2) 100%);"></div>
+  <div class="hero-content">
+    <div class="eyebrow" style="color:#e01a22; font-weight:800; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:0.4rem;">TEAM PROFILES</div>
+    <h1 style="color:#ffffff !important;">Team Performance Analysis</h1>
+    <p class="hero-sub" style="color:rgba(255,255,255,0.8);">
+      Aggregated player performance profiles by team to evaluate shot volume, conversion rates, and defensive metrics.
+    </p>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -52,7 +67,7 @@ with col_ctrl2:
 with col_ctrl3:
     st.markdown(f"""
     <div style="padding:.5rem 0; font-size:.8rem; color:#64748b;">
-      Updated: {time_since_update()}
+      {time_since_update()}
     </div>
     """, unsafe_allow_html=True)
 
@@ -230,7 +245,7 @@ if not team_players.empty:
 # ── Footer ────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="site-footer">
-  <div class="site-footer-brand">FIFA WC 2026 Stats</div>
-  <div>Team records are derived dynamically from active tournament registries</div>
+  <div class="site-footer-brand">FIFA WC 2026 Stats Centre</div>
+  <div>Dataset: FIFA World Cup 2026 Player Stats by Swapnil Tripathi (Kaggle)</div>
 </div>
 """, unsafe_allow_html=True)

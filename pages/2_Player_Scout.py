@@ -6,6 +6,8 @@ Side-by-side metric comparison and percentile indicators.
 import streamlit as st
 import pandas as pd
 import numpy as np
+import base64
+import pathlib
 
 from utils.data_loader import inject_css, load_outfield, player_list
 from utils.ml_model    import build_xg_model, compute_radar_values, get_percentile, RADAR_ATTRS
@@ -21,14 +23,27 @@ st.set_page_config(
 )
 inject_css()
 
-# ── Header ────────────────────────────────────────────────────
-st.markdown("""
-<div class="page-hero">
-  <div class="ph-eyebrow">PLAYER SCOUT</div>
-  <h1>Player Comparison</h1>
-  <p class="ph-desc">
-    Compare stats between any two outfield players. Attribute bars indicate their percentile rank compared to all tournament players.
-  </p>
+# ── Header with Banner Image ──────────────────────────────────
+bg_path = "assets/players_matchup.png"
+bg_tag = ""
+try:
+    bg_bytes = pathlib.Path(bg_path).read_bytes()
+    bg_b64 = base64.b64encode(bg_bytes).decode()
+    bg_tag = f'<img class="bg" src="data:image/png;base64,{bg_b64}" alt="Player Matchup">'
+except Exception:
+    pass
+
+st.markdown(f"""
+<div class="premium-hero">
+  {bg_tag}
+  <div class="overlay" style="background: linear-gradient(90deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.7) 50%, rgba(15,23,42,0.2) 100%);"></div>
+  <div class="hero-content">
+    <div class="eyebrow" style="color:#e01a22; font-weight:800; letter-spacing:0.15em; text-transform:uppercase; margin-bottom:0.4rem;">PLAYER COMPARISON</div>
+    <h1 style="color:#ffffff !important;">Player Matchups</h1>
+    <p class="hero-sub" style="color:rgba(255,255,255,0.8);">
+      Compare stats between any two outfield players. Attribute bars indicate their percentile rank compared to all tournament players.
+    </p>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
@@ -77,7 +92,7 @@ with col_sel2:
     )
 
 if p_a == p_b:
-    st.warning("⚠️ Choose two different players to compare.")
+    st.warning("Select two different players to compare.")
     st.stop()
 
 # Get rows
@@ -162,7 +177,7 @@ with col_c2:
     st.plotly_chart(percentile_bar_chart(p_a, p_b, vals_a, vals_b), width='stretch')
 
 # ── Stats Table ───────────────────────────────────────────────
-with st.expander("📋 Full Stats Sheet"):
+with st.expander("Full Stats Sheet"):
     stat_definitions = [
         ("Games Played", "games"),
         ("Minutes Played", "minutes"),
@@ -198,7 +213,7 @@ with st.expander("📋 Full Stats Sheet"):
 # ── Footer ────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="site-footer">
-  <div class="site-footer-brand">FIFA WC 2026 Stats</div>
-  <div>Comparison parameters are compiled dynamically from tournament logs</div>
+  <div class="site-footer-brand">FIFA WC 2026 Stats Centre</div>
+  <div>Dataset: FIFA World Cup 2026 Player Stats by Swapnil Tripathi (Kaggle)</div>
 </div>
 """, unsafe_allow_html=True)

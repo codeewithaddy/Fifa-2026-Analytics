@@ -1,6 +1,6 @@
 """
 pages/0_Home.py — FIFA World Cup 2026 Stats & Analysis
-Home Page / Match Centre with custom Mockup UI and Favicon.
+Home Page / Match Centre.
 """
 
 import streamlit as st
@@ -62,7 +62,7 @@ st.markdown(f"""
     WC 2026 Stats
   </div>
   <div style="font-size:0.8rem; color:#64748b;">
-    ⟳ {update_status}
+    {update_status}
   </div>
 </div>
 """, unsafe_allow_html=True)
@@ -109,7 +109,7 @@ with col5:
 st.markdown("""
 <div class="clean-header">
   <h2>Recent Matches</h2>
-  <span class="tag">Live Centre</span>
+  <span class="tag">Match Outcomes</span>
 </div>
 """, unsafe_allow_html=True)
 
@@ -120,9 +120,8 @@ if matches:
         st.markdown(f"""
         <div class="live-match-row">
           <div style="display:flex; align-items:center; gap:1.5rem; flex:1;">
-            <div class="live-badge">
-              <span class="live-dot"></span>
-              Live
+            <div class="live-badge" style="background:rgba(15,37,71,0.06); color:#0f2547; border-color:rgba(15,37,71,0.12);">
+              Match Center
             </div>
             <strong style="font-size:0.85rem; color:#64748b; text-transform:uppercase; min-width:100px;">
               {match['stage']}
@@ -135,7 +134,7 @@ if matches:
               {match['away']} {away_flag}
             </span>
           </div>
-          <div style="font-size:0.82rem; color:#94a3b8; font-weight:600;">Finished</div>
+          <div style="font-size:0.82rem; color:#94a3b8; font-weight:600;">Completed</div>
         </div>
         """, unsafe_allow_html=True)
 else:
@@ -157,15 +156,15 @@ conf_agg = teams.groupby("confederation").agg(
 
 card_cols = st.columns(5)
 conf_styles = {
-    "UEFA": ("card-uefa", "🇪🇺"),
-    "CONMEBOL": ("card-conmebol", "🇧🇷"),
-    "CONCACAF": ("card-concacaf", "🇺🇸"),
-    "CAF": ("card-caf", "🇿🇦"),
-    "AFC": ("card-afc", "🇯🇵"),
+    "UEFA": ("card-uefa", "UEFA"),
+    "CONMEBOL": ("card-conmebol", "CONMEBOL"),
+    "CONCACAF": ("card-concacaf", "CONCACAF"),
+    "CAF": ("card-caf", "CAF"),
+    "AFC": ("card-afc", "AFC"),
 }
 
 for idx, (conf_name, style_tuple) in enumerate(conf_styles.items()):
-    c_style, c_flag = style_tuple
+    c_style, c_text = style_tuple
     row_c = conf_agg[conf_agg["confederation"] == conf_name]
     c_goals = int(row_c["goals"].values[0]) if not row_c.empty else 0
     c_squads = int(row_c["squads"].values[0]) if not row_c.empty else 0
@@ -175,7 +174,7 @@ for idx, (conf_name, style_tuple) in enumerate(conf_styles.items()):
         <div class="conf-card {c_style}">
           <div class="conf-card-header">
             <span class="conf-card-title">{conf_name}</span>
-            <span class="conf-card-tag">{c_flag} Active</span>
+            <span class="conf-card-tag" style="background:rgba(15,37,71,0.06); color:#0f2547;">Active</span>
           </div>
           <div>
             <div class="conf-card-body">{c_goals}</div>
@@ -245,7 +244,7 @@ with nav4:
 # ── Footer ────────────────────────────────────────────────────
 st.markdown(f"""
 <div class="site-footer">
-  <div class="site-footer-brand">FIFA WC 2026 Stats</div>
-  <div>Updated: {update_status} · Data sources: worldcup26.ir &amp; local records</div>
+  <div class="site-footer-brand">FIFA WC 2026 Stats Centre</div>
+  <div>Dataset: FIFA World Cup 2026 Player Stats by Swapnil Tripathi (Kaggle) · Not affiliated with FIFA</div>
 </div>
 """, unsafe_allow_html=True)

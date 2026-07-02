@@ -31,10 +31,37 @@ html, body, [data-testid="stApp"] {
 }
 
 /* ── Hide Streamlit Elements ────────────────────────────── */
-#MainMenu, footer, [data-testid="stHeader"],
-[data-testid="stToolbar"], [data-testid="stDecoration"] {
+#MainMenu, footer, [data-testid="stToolbar"], [data-testid="stDecoration"] {
   display: none !important;
 }
+
+[data-testid="stHeader"] {
+  background: transparent !important;
+  z-index: 999990 !important;
+}
+
+/* Make collapsed control sidebar toggle button highly visible */
+[data-testid="collapsedControl"] {
+  background: var(--navy) !important;
+  color: #ffffff !important;
+  border-radius: 8px !important;
+  box-shadow: var(--shadow) !important;
+  left: 1.5rem !important;
+  top: 1rem !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 40px !important;
+  height: 40px !important;
+}
+
+[data-testid="collapsedControl"] svg {
+  fill: #ffffff !important;
+  color: #ffffff !important;
+}
+
+
 
 /* ── Sidebar Styling ──────────────────────────────────────── */
 [data-testid="stSidebar"] {
