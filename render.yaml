@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: fifa-2026-intelligence-hub
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: streamlit run app.py --server.port $PORT --server.address 0.0.0.0 --server.headless true
+    envVars:
+      - key: KAGGLE_USERNAME
+        sync: false   # Set this in the Render dashboard (secret)
+      - key: KAGGLE_KEY
+        sync: false   # Set this in the Render dashboard (secret)
+      - key: PYTHON_VERSION
+        value: 3.11.0
+
+  - type: cron
+    name: fifa-daily-data-refresh
+    runtime: python
+    schedule: "0 0 * * *"   # Every day at midnight UTC
+    buildCommand: pip install -r requirements.txt
+    startCommand: python refresh_data.py
+    envVars:
+      - key: KAGGLE_USERNAME
+        sync: false
+      - key: KAGGLE_KEY
+        sync: false
