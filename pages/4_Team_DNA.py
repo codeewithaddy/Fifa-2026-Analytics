@@ -14,7 +14,7 @@ from utils.api_client  import flag, time_since_update
 # ── Streamlit Config ──────────────────────────────────────────
 st.set_page_config(
     page_title="Team Performance Analysis · FIFA 2026",
-    page_icon="⚽",
+    page_icon="assets/favicon.ico",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -105,7 +105,7 @@ if best_atk is not None:
         """, unsafe_allow_html=True)
     with col_k3:
         st.markdown(f"""
-        <div class="app-card" style="border-left: 4px solid #0f172a;">
+        <div class="app-card" style="border-left: 4px solid #0f2547;">
           <div class="app-card-title">Highest Shot Volume</div>
           <div class="app-card-value">{int(best_sht['total_shots'])}</div>
           <div style="font-weight:700; margin-top:0.5rem; font-size:0.95rem;">
@@ -137,20 +137,20 @@ total_ranked = len(ranked_teams)
 for r_idx in range(0, min(total_ranked, 20), 4):
     row_t = ranked_teams.iloc[r_idx : r_idx + 4]
     row_cols = st.columns(4)
-    for c_idx, (_, t) in enumerate(row_teams := row_t.iterrows()):
+    for c_idx, (_, t) in enumerate(row_t.iterrows()):
         style_txt = team_style_label(t["goals_per_shot"], t["total_shots"] / max(t["players"], 1))
-        conv_c = "#048a5f" if t["goals_per_shot"] > 0.18 else ("#e01a22" if t["goals_per_shot"] < 0.10 else "#0f172a")
+        conv_c = "#048a5f" if t["goals_per_shot"] > 0.18 else ("#e01a22" if t["goals_per_shot"] < 0.10 else "#0f2547")
         with row_cols[c_idx]:
             st.markdown(f"""
             <div class="app-card" style="text-align:center;">
               <div style="font-size:2rem; margin-bottom:0.25rem;">{flag(t['team'])}</div>
-              <div style="font-weight:800; font-size:1rem; color:#0f172a; margin-bottom:0.25rem;">{t['team']}</div>
+              <div style="font-weight:800; font-size:1rem; color:#0f2547; margin-bottom:0.25rem;">{t['team']}</div>
               <div style="font-size:0.7rem; color:#64748b; font-weight:700; text-transform:uppercase; margin-bottom:0.75rem;">
                 {t['confederation']}
               </div>
               <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.5rem; text-align:center; border-top:1px solid #f1f5f9; padding-top:0.75rem;">
                 <div>
-                  <strong style="font-size:1rem;color:#0f172a;">{int(t['total_goals'])}</strong>
+                  <strong style="font-size:1rem;color:#0f2547;">{int(t['total_goals'])}</strong>
                   <div style="font-size:0.65rem;color:#94a3b8;text-transform:uppercase;">goals</div>
                 </div>
                 <div>
@@ -158,11 +158,11 @@ for r_idx in range(0, min(total_ranked, 20), 4):
                   <div style="font-size:0.65rem;color:#94a3b8;text-transform:uppercase;">conv.</div>
                 </div>
                 <div>
-                  <strong style="font-size:1rem;color:#0f172a;">{int(t['total_shots'])}</strong>
+                  <strong style="font-size:1rem;color:#0f2547;">{int(t['total_shots'])}</strong>
                   <div style="font-size:0.65rem;color:#94a3b8;text-transform:uppercase;">shots</div>
                 </div>
               </div>
-              <div style="margin-top:0.75rem; font-size:0.75rem; font-weight:700; background:#f1f5f9; padding:0.3rem; border-radius:4px; color:#0f172a;">
+              <div style="margin-top:0.75rem; font-size:0.75rem; font-weight:700; background:#f1f5f9; padding:0.3rem; border-radius:4px; color:#0f2547;">
                 {style_txt}
               </div>
             </div>
@@ -199,15 +199,15 @@ if not team_players.empty:
           <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase;">Goals</div>
         </div>
         <div>
-          <div style="font-family:'Montserrat',sans-serif; font-weight:800; font-size:1.4rem; color:#0f172a;">{team_row['goals_per_shot']:.0%}</div>
+          <div style="font-family:'Montserrat',sans-serif; font-weight:800; font-size:1.4rem; color:#0f2547;">{team_row['goals_per_shot']:.0%}</div>
           <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase;">Conversion</div>
         </div>
         <div>
-          <div style="font-family:'Montserrat',sans-serif; font-weight:800; font-size:1.4rem; color:#0f172a;">{int(team_row['total_shots'])}</div>
+          <div style="font-family:'Montserrat',sans-serif; font-weight:800; font-size:1.4rem; color:#0f2547;">{int(team_row['total_shots'])}</div>
           <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase;">Shots</div>
         </div>
         <div>
-          <div style="font-family:'Montserrat',sans-serif; font-weight:800; font-size:1.4rem; color:#0f172a;">{shots_pp:.1f}</div>
+          <div style="font-family:'Montserrat',sans-serif; font-weight:800; font-size:1.4rem; color:#0f2547;">{shots_pp:.1f}</div>
           <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase;">Shots / Player</div>
         </div>
       </div>

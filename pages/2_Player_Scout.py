@@ -15,7 +15,7 @@ from utils.api_client  import flag
 # ── Streamlit Config ──────────────────────────────────────────
 st.set_page_config(
     page_title="Player Comparison · FIFA 2026",
-    page_icon="⚽",
+    page_icon="assets/favicon.ico",
     layout="wide",
     initial_sidebar_state="expanded",
 )

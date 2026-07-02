@@ -15,7 +15,7 @@ from utils.api_client  import time_since_update, flag
 # ── Streamlit Config ──────────────────────────────────────────
 st.set_page_config(
     page_title="Shot Quality & Expected Goals · FIFA 2026",
-    page_icon="🎯",
+    page_icon="assets/favicon.ico",
     layout="wide",
     initial_sidebar_state="expanded",
 )
