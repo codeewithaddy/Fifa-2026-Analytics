@@ -1,6 +1,6 @@
 """
 pages/0_Home.py — FIFA World Cup 2026 Stats & Analysis
-Home Page / Match Centre.
+Home Page / Match Centre with custom Mockup UI and Favicon.
 """
 
 import streamlit as st
@@ -15,6 +15,13 @@ from utils.api_client   import (
 )
 from utils.ml_model import build_xg_model
 
+# ── Streamlit Config with Favicon ─────────────────────────────
+st.set_page_config(
+    page_title="FIFA World Cup 2026 — Stats & Analysis",
+    page_icon="assets/favicon.ico",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
 inject_css()
 
 # ── Load Live/Local Data ──────────────────────────────────────
@@ -38,12 +45,12 @@ avg_goals     = round(total_goals / max(len(matches), 1), 2) if matches else rou
 
 # ── Header ────────────────────────────────────────────────────
 update_status = time_since_update("matches")
-logo_path = "assets/logo.png"
+logo_path = "assets/favicon-96x96.png"
 logo_tag = ""
 try:
     logo_bytes = pathlib.Path(logo_path).read_bytes()
     logo_b64 = base64.b64encode(logo_bytes).decode()
-    logo_tag = f'<img src="data:image/png;base64,{logo_b64}" style="height:32px; border-radius:50%;">'
+    logo_tag = f'<img src="data:image/png;base64,{logo_b64}" style="height:32px; border-radius:4px;">'
 except Exception:
     pass
 
@@ -51,46 +58,41 @@ st.markdown(f"""
 <div class="site-header">
   <div class="brand">
     {logo_tag}
-    <span class="brand-tag">FIFA</span>
+    <span class="brand-tag" style="background:#0f2547;">FIFA</span>
     WC 2026 Stats
   </div>
-  <div style="font-size:0.8rem; color:rgba(255,255,255,0.7);">
-    Status: {update_status}
+  <div style="font-size:0.8rem; color:#64748b;">
+    ⟳ {update_status}
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Hero Card with Trophy Background ──────────────────────────
-bg_path = "assets/trophy_bg.png"
-bg_tag = ""
+# ── Premium Hero (Mbappé Silhouette Mockup) ──────────────────
+player_path = "assets/player_header.png"
+player_tag = ""
 try:
-    bg_bytes = pathlib.Path(bg_path).read_bytes()
-    bg_b64 = base64.b64encode(bg_bytes).decode()
-    bg_tag = f'<img class="bg" src="data:image/png;base64,{bg_b64}" alt="Trophy">'
+    player_bytes = pathlib.Path(player_path).read_bytes()
+    player_b64 = base64.b64encode(player_bytes).decode()
+    player_tag = f'<img class="hero-player" src="data:image/png;base64,{player_b64}" alt="Player Profile">'
 except Exception:
     pass
 
 st.markdown(f"""
-<div class="pitch-hero">
-  {bg_tag}
-  <div class="overlay" style="background: linear-gradient(90deg, rgba(15,23,42,0.95) 0%, rgba(15,23,42,0.7) 50%, rgba(15,23,42,0.2) 100%);"></div>
-  <div class="hero-content">
-    <div class="eyebrow" style="color:#e01a22; font-weight:800; letter-spacing:0.15em;">TOURNAMENT HUB</div>
-    <h1 style="color:#ffffff !important;">World Cup 2026 Centre</h1>
-    <p class="hero-sub" style="color:rgba(255,255,255,0.8);">
-      Official tournament statistics, live match outcomes, and goal projections.
+<div class="premium-hero">
+  <div class="hero-text">
+    <div class="eyebrow" style="font-family:'Montserrat',sans-serif;font-size:0.75rem;font-weight:900;color:#e01a22;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:0.4rem;">TOURNAMENT CENTRE</div>
+    <h1>You can be the<br>king of stats</h1>
+    <p class="sub">
+      Analyzing the most interesting FIFA 2026 World Cup data metrics. Expected goals, player comparisons, and live match updates.
     </p>
+  </div>
+  <div class="hero-img-container">
+    {player_tag}
   </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Quick Tournament Figures ─────────────────────────────────
-st.markdown("""
-<div class="clean-header">
-  <h2>Tournament Summary</h2>
-</div>
-""", unsafe_allow_html=True)
-
+# ── Quick Stats Strip ─────────────────────────────────────────
 col1, col2, col3, col4, col5 = st.columns(5)
 with col1:
     st.metric("Goals Scored", f"{total_goals}", help="Total goals from tracked players")
@@ -103,112 +105,86 @@ with col4:
 with col5:
     st.metric("Avg Goals / Match", f"{avg_goals}")
 
-# ── Latest Match Scores ───────────────────────────────────────
-if matches:
-    st.markdown("""
-    <div class="clean-header">
-      <h2>Recent Match Outcomes</h2>
-      <span class="tag">Live Scores</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-    m_cols = st.columns(min(4, len(matches)))
-    for idx, match in enumerate(matches[:4]):
-        home_flag = flag(match["home"])
-        away_flag = flag(match["away"])
-        with m_cols[idx]:
-            st.markdown(f"""
-            <div class="app-card">
-              <div class="app-card-title">{match['stage']}</div>
-              <div style="display:flex; align-items:center; justify-content:space-between; margin:0.5rem 0;">
-                <span>{home_flag} {match['home']}</span>
-                <strong style="font-size:1.2rem;">{match['home_score']}</strong>
-              </div>
-              <div style="display:flex; align-items:center; justify-content:space-between; margin:0.5rem 0;">
-                <span>{away_flag} {match['away']}</span>
-                <strong style="font-size:1.2rem;">{match['away_score']}</strong>
-              </div>
-              <div class="app-card-desc" style="font-size:0.75rem; text-align:right;">Finished</div>
-            </div>
-            """, unsafe_allow_html=True)
-
-# ── Top Scorers Overview ──────────────────────────────────────
+# ── Live Matches (Match Card Mockup UI) ───────────────────────
 st.markdown("""
 <div class="clean-header">
-  <h2>Top Scorers</h2>
-  <span class="tag">Goals Leaderboard</span>
+  <h2>Recent Matches</h2>
+  <span class="tag">Live Centre</span>
 </div>
 """, unsafe_allow_html=True)
 
-top_scorers = df[df["goals"] > 0].nlargest(5, "goals")
-s_cols = st.columns(5)
-positions_medals = ["1st", "2nd", "3rd", "4th", "5th"]
-
-for idx, (_, row) in enumerate(top_scorers.iterrows()):
-    p_name = row["player"]
-    p_team = row["team"]
-    p_goals = int(row["goals"])
-
-    # Calculate xG delta class safely
-    p_delta_row = xg_df[xg_df["player"] == p_name]
-    p_delta = float(p_delta_row["delta_g"].values[0]) if not p_delta_row.empty else 0.0
-
-    if p_delta >= 1.0:
-        perf_badge = '<span style="color:#048a5f;font-weight:700;">Clinical</span>'
-    elif p_delta <= -1.0:
-        perf_badge = '<span style="color:#e01a22;font-weight:700;">Unlucky</span>'
-    else:
-        perf_badge = '<span style="color:#64748b;">Expected level</span>'
-
-    with s_cols[idx]:
+if matches:
+    for match in matches[:3]:
+        home_flag = flag(match["home"])
+        away_flag = flag(match["away"])
         st.markdown(f"""
-        <div class="app-card" style="text-align:center;">
-          <div class="app-card-title">{positions_medals[idx]} Player</div>
-          <div style="font-size:2rem; margin:0.5rem 0;">{flag(p_team)}</div>
-          <div class="app-card-value">{p_goals}</div>
-          <div style="font-weight:700; margin-top:0.5rem; font-size:0.95rem;">{p_name}</div>
-          <div style="font-size:0.8rem; color:#64748b; margin-bottom:0.5rem;">{p_team}</div>
-          <div style="font-size:0.75rem; border-top:1px solid #f1f5f9; padding-top:0.5rem; margin-top:0.5rem;">
-            {perf_badge}
+        <div class="live-match-row">
+          <div style="display:flex; align-items:center; gap:1.5rem; flex:1;">
+            <div class="live-badge">
+              <span class="live-dot"></span>
+              Live
+            </div>
+            <strong style="font-size:0.85rem; color:#64748b; text-transform:uppercase; min-width:100px;">
+              {match['stage']}
+            </strong>
+            <span style="font-size:1.05rem; font-weight:700;">
+              {home_flag} {match['home']}  
+              <span style="color:#e01a22; margin:0 0.5rem; font-family:Montserrat,sans-serif; font-size:1.3rem;">
+                {match['home_score']} – {match['away_score']}
+              </span>
+              {match['away']} {away_flag}
+            </span>
+          </div>
+          <div style="font-size:0.82rem; color:#94a3b8; font-weight:600;">Finished</div>
+        </div>
+        """, unsafe_allow_html=True)
+else:
+    st.info("No match results available yet.")
+
+# ── Confederation Cards (Mockup Leagues Grid) ─────────────────
+st.markdown("""
+<div class="clean-header">
+  <h2>Confederation Performance</h2>
+  <span class="tag">Continental Groups</span>
+</div>
+""", unsafe_allow_html=True)
+
+# Compute quick stats per confederation
+conf_agg = teams.groupby("confederation").agg(
+    goals=("total_goals", "sum"),
+    squads=("team", "count")
+).reset_index()
+
+card_cols = st.columns(5)
+conf_styles = {
+    "UEFA": ("card-uefa", "🇪🇺"),
+    "CONMEBOL": ("card-conmebol", "🇧🇷"),
+    "CONCACAF": ("card-concacaf", "🇺🇸"),
+    "CAF": ("card-caf", "🇿🇦"),
+    "AFC": ("card-afc", "🇯🇵"),
+}
+
+for idx, (conf_name, style_tuple) in enumerate(conf_styles.items()):
+    c_style, c_flag = style_tuple
+    row_c = conf_agg[conf_agg["confederation"] == conf_name]
+    c_goals = int(row_c["goals"].values[0]) if not row_c.empty else 0
+    c_squads = int(row_c["squads"].values[0]) if not row_c.empty else 0
+
+    with card_cols[idx]:
+        st.markdown(f"""
+        <div class="conf-card {c_style}">
+          <div class="conf-card-header">
+            <span class="conf-card-title">{conf_name}</span>
+            <span class="conf-card-tag">{c_flag} Active</span>
+          </div>
+          <div>
+            <div class="conf-card-body">{c_goals}</div>
+            <div style="font-size:0.7rem; font-weight:700; text-transform:uppercase; margin-top:0.25rem; opacity:0.8;">
+              Goals · {c_squads} Nations
+            </div>
           </div>
         </div>
         """, unsafe_allow_html=True)
-
-# ── Standings Section ─────────────────────────────────────────
-if raw_groups:
-    st.markdown("""
-    <div class="clean-header">
-      <h2>Group Standings</h2>
-      <span class="tag">Live Tables</span>
-    </div>
-    """, unsafe_allow_html=True)
-
-    try:
-        groups_list = raw_groups if isinstance(raw_groups, list) else raw_groups.get("groups", [])
-        if groups_list:
-            g_cols = st.columns(min(4, len(groups_list)))
-            for g_idx, grp in enumerate(groups_list[:4]):
-                grp_name  = grp.get("name") or grp.get("group") or f"Group {g_idx+1}"
-                grp_teams = grp.get("teams") or grp.get("standings") or []
-                with g_cols[g_idx]:
-                    st.markdown(f"**{grp_name}**")
-                    if grp_teams:
-                        t_rows = []
-                        for t in grp_teams[:4]:
-                            t_name = t.get("team") or t.get("name") or "?"
-                            t_pts  = t.get("points") or t.get("pts") or 0
-                            t_gf   = t.get("goals_for") or t.get("gf") or 0
-                            t_ga   = t.get("goals_against") or t.get("ga") or 0
-                            t_rows.append({
-                                "Nation": f"{flag(t_name)} {t_name}",
-                                "Pts": t_pts,
-                                "GF": t_gf,
-                                "GA": t_ga,
-                                "GD": int(t_gf) - int(t_ga)
-                            })
-                        st.dataframe(pd.DataFrame(t_rows), hide_index=True, width='stretch', height=170)
-    except Exception:
-        pass
 
 # ── Navigation Cards ──────────────────────────────────────────
 st.markdown("""
@@ -222,7 +198,7 @@ with nav1:
     st.markdown("""
     <div class="app-card" style="height:140px;">
       <div class="app-card-title">Analysis Mode</div>
-      <strong style="font-size:1.1rem;color:#0f172a;">Shooting Analysis</strong>
+      <strong style="font-size:1.1rem;color:#0f2547;">Shooting Analysis</strong>
       <p style="font-size:0.8rem;color:#64748b;margin-top:0.25rem;">
         Determines which players finish above or below their estimated chances.
       </p>
@@ -234,7 +210,7 @@ with nav2:
     st.markdown("""
     <div class="app-card" style="height:140px;">
       <div class="app-card-title">Scouting Comparison</div>
-      <strong style="font-size:1.1rem;color:#0f172a;">Player Comparison</strong>
+      <strong style="font-size:1.1rem;color:#0f2547;">Player Comparison</strong>
       <p style="font-size:0.8rem;color:#64748b;margin-top:0.25rem;">
         Side-by-side metric comparison and percentile indicators.
       </p>
@@ -246,7 +222,7 @@ with nav3:
     st.markdown("""
     <div class="app-card" style="height:140px;">
       <div class="app-card-title">Scoring Projections</div>
-      <strong style="font-size:1.1rem;color:#0f172a;">Goal Projections</strong>
+      <strong style="font-size:1.1rem;color:#0f2547;">Goal Projections</strong>
       <p style="font-size:0.8rem;color:#64748b;margin-top:0.25rem;">
         Projected final goal totals based on goals per game rates.
       </p>
@@ -258,7 +234,7 @@ with nav4:
     st.markdown("""
     <div class="app-card" style="height:140px;">
       <div class="app-card-title">Team Performance</div>
-      <strong style="font-size:1.1rem;color:#0f172a;">Team Performance</strong>
+      <strong style="font-size:1.1rem;color:#0f2547;">Team Performance</strong>
       <p style="font-size:0.8rem;color:#64748b;margin-top:0.25rem;">
         Analysis of aggregate shots vs actual goals per nation.
       </p>
