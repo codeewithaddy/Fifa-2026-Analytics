@@ -1,219 +1,213 @@
 """
-pages/3_Golden_Boot.py — Golden Boot Predictor
-FIFA 2026 Intelligence Hub
+pages/3_Golden_Boot.py — Top Scorers & Projections
+Projecting player tournament scores.
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from utils.data_loader import inject_css, load_outfield, MAX_GAMES
-from utils.ml_model import project_goals
-from utils.charts import golden_boot_bar, NAVY_CARD, GOLD, TEAL, WHITE, WHITE_DIM, BORDER, RED, NAVY_MID, _base_layout
 
+from utils.data_loader import inject_css, load_outfield, MAX_GAMES
+from utils.ml_model    import project_goals
+from utils.charts      import golden_boot_bar, NAVY, RED, GREEN, TEXT, TEXT_MUTED, BORDER, BG, _base_layout
+from utils.api_client  import flag, time_since_update
+
+# ── Streamlit Config ──────────────────────────────────────────
 st.set_page_config(
-    page_title="Golden Boot · FIFA 2026",
-    page_icon="🥾",
+    page_title="Top Scorers & Projections · FIFA 2026",
+    page_icon="⚽",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 inject_css()
 
 # ── Header ────────────────────────────────────────────────────
 st.markdown("""
-<div class="page-title-row">
-  <h1>🥾 Golden Boot Predictor</h1>
-  <span class="live-badge"><span class="live-dot"></span>Projected</span>
+<div class="page-hero">
+  <div class="ph-eyebrow">GOAL PROJECTIONS</div>
+  <h1>Top Scorers &amp; Projections</h1>
+  <p class="ph-desc">
+    Goal projections to the end of the tournament, extrapolated from current goals per 90-minute rates.
+  </p>
 </div>
-<p style="color:rgba(232,237,245,0.65); margin-top:-0.5rem; margin-bottom:1.5rem;">
-  Mathematical projection of each player's final goal tally based on their current
-  scoring rate. The predicted winner may surprise you.
-</p>
 """, unsafe_allow_html=True)
 
-# ── Load data ─────────────────────────────────────────────────
-with st.spinner("Calculating projections…"):
+# ── Load Data ─────────────────────────────────────────────────
+with st.spinner(""):
     df = load_outfield()
 
-# ── Sidebar controls ──────────────────────────────────────────
-with st.sidebar:
-    st.markdown("### ⚙️ Projection Settings")
-    max_games = st.slider("Max tournament games", 3, 8, MAX_GAMES,
-                          help="FIFA 2026 has 7 rounds (48-team format)")
-    min_goals  = st.slider("Min current goals", 1, 5, 1)
-    show_n     = st.slider("Show top N players", 5, 20, 10)
-    st.markdown("---")
-    st.caption(f"Assumes each player continues at their current goals/90 rate for remaining games.")
+# ── Controls ──────────────────────────────────────────────────
+st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
+col_ctrl1, col_ctrl2, col_ctrl3 = st.columns([3, 3, 2])
 
-# ── Project ───────────────────────────────────────────────────
-proj = project_goals(df, max_games=max_games)
-proj = proj[proj["goals"] >= min_goals].head(show_n)
+with col_ctrl1:
+    view_type = st.radio(
+        "Current vs Projected metrics:",
+        ["Current Goals", "Projected Goals Total", "Goals per 90 mins"],
+        horizontal=True,
+    )
+with col_ctrl2:
+    rounds_val = st.radio(
+        "Projected rounds played:",
+        [6, 7, 8],
+        index=1,
+        horizontal=True,
+    )
+with col_ctrl3:
+    st.markdown(f"""
+    <div style="padding:.5rem 0; font-size:.8rem; color:#64748b;">
+      Updated: {time_since_update()}
+    </div>
+    """, unsafe_allow_html=True)
 
-# ── Hero KPIs ─────────────────────────────────────────────────
+# Projection Model Fit
+proj = project_goals(df, max_games=rounds_val)
 if proj.empty:
-    st.warning("No players match filters. Lower 'Min current goals'.")
+    st.warning("No players found with goals recorded.")
     st.stop()
 
-top_current  = proj.iloc[0]  # Already sorted by goals
-top_projected = proj.loc[proj["projected_goals"].idxmax()]
-
-k1, k2, k3, k4 = st.columns(4)
-k1.metric("👑 Current Leader",
-          f"{int(top_current['goals'])} goals",
-          top_current['player'])
-k2.metric("🔮 Projected Winner",
-          f"{top_projected['projected_goals']:.1f} goals",
-          top_projected['player'],
-          delta="If current rate holds" if top_projected['player'] != top_current['player'] else "Same player")
-k3.metric("🏟️ Max Games",      str(max_games))
-k4.metric("👥 Players Tracked", str(len(proj)))
-
-st.markdown("<hr>", unsafe_allow_html=True)
-
-# ── Main projection chart ─────────────────────────────────────
+# ── Top 5 Projected Scorers Cards ─────────────────────────────
 st.markdown("""
-<div class="section-header">
-  <span class="section-icon">📈</span>
-  <h2>Goal Projection Chart</h2>
-  <span class="badge">7-Game Total</span>
+<div class="clean-header">
+  <h2>Scoring Race Leaders</h2>
+  <span class="tag">Standings</span>
 </div>
 """, unsafe_allow_html=True)
 
-st.plotly_chart(golden_boot_bar(proj), use_container_width=True)
+top5 = proj.head(5)
+s_cols = st.columns(5)
+positions_tags = ["1st", "2nd", "3rd", "4th", "5th"]
 
-st.markdown("<hr>", unsafe_allow_html=True)
+for idx, (_, row) in enumerate(top5.iterrows()):
+    p_name = row["player"]
+    p_team = row["team"]
+    p_goals = int(row["goals"])
+    p_proj = row["projected_goals"]
 
-# ── Trajectory Lines Chart ────────────────────────────────────
+    with s_cols[idx]:
+        st.markdown(f"""
+        <div class="app-card" style="text-align:center; border-top: 4px solid {RED if idx==0 else BORDER};">
+          <div class="app-card-title">{positions_tags[idx]} Scorer</div>
+          <div style="font-size:2rem; margin:0.5rem 0;">{flag(p_team)}</div>
+          <div class="app-card-value">{p_goals}</div>
+          <div style="font-weight:700; margin-top:0.5rem; font-size:0.95rem;">{p_name}</div>
+          <div style="font-size:0.8rem; color:#64748b;">{p_team}</div>
+          <div style="margin-top:0.75rem; padding:0.35rem 0.5rem; background:#f1f5f9; border-radius:4px; font-weight:700; font-size:0.8rem;">
+            {p_proj:.1f} Projected
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+# ── Projected goal bar chart ──────────────────────────────────
 st.markdown("""
-<div class="section-header">
-  <span class="section-icon">📉</span>
-  <h2>Scoring Trajectory</h2>
-  <span class="badge">Game by Game</span>
+<div class="clean-header">
+  <h2>Goal Tally Projection Map</h2>
+  <span class="tag">Top 10 Scorers</span>
 </div>
-<p style="color:rgba(232,237,245,0.55); font-size:0.88rem;">
-  Projected cumulative goals for each game of the tournament, based on current goals/90 rate.
-</p>
+""", unsafe_allow_html=True)
+st.plotly_chart(golden_boot_bar(proj), width='stretch')
+
+# ── Goal Trajectories ─────────────────────────────────────────
+st.markdown("""
+<div class="clean-header">
+  <h2>Scoring Trajectory Profile</h2>
+</div>
 """, unsafe_allow_html=True)
 
-# Build trajectory lines
+trajectory_palette = [RED, GREEN, "#1e40af", "#d97706", "#7c3aed", "#0891b2", "#059669"]
 fig_traj = go.Figure()
-palette = [GOLD, TEAL, "#ff6b35", "#c084fc", "#4f8ef7",
-           "#fb7185", "#34d399", "#f97316", "#a78bfa", "#38bdf8"]
 
-for i, (_, row) in enumerate(proj.head(8).iterrows()):
-    games = list(range(0, max_games + 1))
-    goals_traj = [
-        min(row["goals"] + row["goals_per90"] * max(0, g - float(row["games_played_est"])), 99)
-        if g >= float(row["games_played_est"])
-        else row["goals"] * (g / max(float(row["games_played_est"]), 1))
-        for g in games
-    ]
-    goals_traj[0] = 0
+for idx, (_, row) in enumerate(proj.head(7).iterrows()):
+    g_played = float(row["games_played_est"])
+    g_rate = float(row["goals_per90"])
+    g_actual = float(row["goals"])
+    games = list(range(0, rounds_val + 1))
+    traj = []
+    for g in games:
+        if g <= g_played:
+            traj.append(g_actual * (g / max(g_played, 1)))
+        else:
+            traj.append(g_actual + g_rate * (g - g_played))
+    traj[0] = 0.0
 
     fig_traj.add_trace(go.Scatter(
-        x=games, y=goals_traj,
-        mode="lines+markers",
+        x=games, y=[round(v, 1) for v in traj],
+        mode="lines",
         name=row["player"],
-        line=dict(color=palette[i % len(palette)], width=2.5),
-        marker=dict(size=6, color=palette[i % len(palette)]),
+        line=dict(color=trajectory_palette[idx % len(trajectory_palette)], width=2.5),
         hovertemplate=f"<b>{row['player']}</b><br>Game %{{x}}: %{{y:.1f}} goals<extra></extra>",
     ))
-
-# Mark current point
-for i, (_, row) in enumerate(proj.head(8).iterrows()):
+    # Diamond Marker
     fig_traj.add_trace(go.Scatter(
-        x=[float(row["games_played_est"])],
-        y=[float(row["goals"])],
+        x=[g_played], y=[g_actual],
         mode="markers",
-        marker=dict(size=14, symbol="diamond", color=palette[i % len(palette)],
-                    line=dict(width=2, color="white")),
+        marker=dict(size=11, color=trajectory_palette[idx % len(trajectory_palette)], symbol="diamond", line=dict(width=2, color="white")),
         showlegend=False,
-        hovertemplate=f"<b>{row['player']}</b><br>Current: {int(row['goals'])} goals<extra></extra>",
+        hovertemplate=f"<b>{row['player']}</b><br>Current: {int(g_actual)} goals<extra></extra>",
     ))
 
 fig_traj.add_vline(
-    x=float(proj["games_played_est"].mean()),
-    line_dash="dot", line_color=WHITE_DIM, line_width=1,
-    annotation_text="← Actual | Projected →",
-    annotation_font=dict(color=WHITE_DIM, size=10),
+    x=float(proj["games_played_est"].median()),
+    line_dash="dot", line_color="#cbd5e1", line_width=1.5,
+    annotation_text="← Played | Projected →",
+    annotation_font=dict(color=TEXT_MUTED, size=10),
+    annotation_position="top",
 )
 
 fig_traj.update_layout(
     **_base_layout(
-        title=dict(text="Projected Cumulative Goals by Game",
-                   font=dict(family="Outfit", size=18, color=WHITE)),
-        xaxis=dict(title="Game Number", tickvals=list(range(0, max_games + 1))),
-        yaxis=dict(title="Cumulative Goals", rangemode="tozero"),
-        height=460,
+        title=dict(text="Cumulative Goals vs Projected Match Increments",
+                   font=dict(family="Montserrat, sans-serif", size=17, color=NAVY), x=0),
+        xaxis=dict(title="Matches", tickvals=list(range(0, rounds_val + 1))),
+        yaxis=dict(title="Goals Count", rangemode="tozero"),
+        height=420,
     )
 )
-st.plotly_chart(fig_traj, use_container_width=True)
+st.plotly_chart(fig_traj, width='stretch')
 
-st.markdown("<hr>", unsafe_allow_html=True)
-
-# ── Data Table ────────────────────────────────────────────────
+# ── Projections Explainer List ────────────────────────────────
 st.markdown("""
-<div class="section-header">
-  <span class="section-icon">📋</span>
-  <h2>Full Projection Table</h2>
+<div class="clean-header">
+  <h2>Projection Details</h2>
 </div>
 """, unsafe_allow_html=True)
 
-display = proj.copy()
-display["games_played_est"] = display["games_played_est"].round(1)
-display["games_remaining"]  = display["games_remaining"].round(1)
-display = display.rename(columns={
-    "player":           "Player",
-    "team":             "Team",
-    "goals":            "Current Goals",
-    "goals_per90":      "Goals/90",
-    "games_played_est": "Est. Games Played",
-    "games_remaining":  "Games Left",
-    "projected_goals":  "Projected Total",
-    "proj_low":         "Proj. Low",
-    "proj_high":        "Proj. High",
-})
-display = display.reset_index(drop=True)
-display.index += 1
+for _, row in proj.head(5).iterrows():
+    g_left = float(row["games_remaining"])
+    st.markdown(f"""
+    <div class="row-item">
+      <div class="row-item-main">
+        <span style="font-size:1.5rem;">{flag(row['team'])}</span>
+        <div>
+          <div class="row-item-name">{row['player']} ({row['team']})</div>
+          <div class="row-item-meta">{int(row['goals'])} goals scored · {row['goals_per90']:.2f} goals per 90 · {g_left:.1f} matches remaining</div>
+        </div>
+      </div>
+      <div class="row-item-value" style="color:#e01a22;">
+        {row['projected_goals']:.1f} Goals Projected
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
 
-st.dataframe(
-    display,
-    use_container_width=True,
-    height=420,
-    column_config={
-        "Current Goals":   st.column_config.ProgressColumn("Current Goals", min_value=0,
-                              max_value=int(display["Current Goals"].max()) + 1),
-        "Projected Total": st.column_config.NumberColumn("🔮 Projected", format="%.1f"),
-        "Goals/90":        st.column_config.NumberColumn("Goals/90", format="%.3f"),
-    },
-)
+# ── Data Expandable ───────────────────────────────────────────
+with st.expander("📋 Full Projections Dataset"):
+    tbl = proj.rename(columns={
+        "player": "Player", "team": "Team",
+        "goals": "Current Goals", "goals_per90": "Goals/90 Rate",
+        "games_played_est": "Matches Played (est.)",
+        "games_remaining": "Matches Remaining",
+        "projected_goals": "Projected Goals Total",
+    })
+    tbl["Goals/90 Rate"]           = tbl["Goals/90 Rate"].round(3)
+    tbl["Matches Played (est.)"] = tbl["Matches Played (est.)"].round(1)
+    tbl["Matches Remaining"]       = tbl["Matches Remaining"].round(1)
+    st.dataframe(tbl.reset_index(drop=True), width='stretch', hide_index=True)
 
-with st.expander("📖 How the Projection Works"):
-    st.markdown("""
-    ### Projection Methodology
-    
-    **Formula:**
-    ```
-    Projected Goals = Current Goals + Goals_per_90 × Games_Remaining
-    ```
-    
-    **Games Remaining** = `max_games − estimated_games_played`  
-    where `estimated_games_played = total_minutes / 90`
-    
-    **Confidence Band (±):**  
-    Based on ±1 standard deviation of the goals/90 rate among all current scorers,
-    multiplied by games remaining.
-    
-    **Assumptions:**
-    - Each game = exactly 90 minutes of play for the player
-    - Players maintain their current per-90 scoring rate
-    - No injuries, suspensions, or tactical changes
-    
-    > This is a statistical projection, not a guarantee. Real football is beautifully unpredictable.
-    """)
-
-st.markdown("""
-<hr>
-<p style="text-align:center; color:rgba(232,237,245,0.3); font-size:0.78rem;">
-  Golden Boot Predictor · FIFA 2026 Intelligence Hub
-</p>
+# ── Footer ────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="site-footer">
+  <div class="site-footer-brand">FIFA WC 2026 Stats</div>
+  <div>Calculations assume constant goals per 90-minute rates and average play-time</div>
+</div>
 """, unsafe_allow_html=True)

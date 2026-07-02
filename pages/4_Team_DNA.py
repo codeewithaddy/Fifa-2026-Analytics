@@ -1,246 +1,236 @@
 """
-pages/4_Team_DNA.py — Team DNA & Performance Analysis
-FIFA 2026 Intelligence Hub
+pages/4_Team_DNA.py — Team Performance Analysis
+Aggregating player stats by team to profile playstyles.
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.graph_objects as go
-import plotly.express as px
-from utils.data_loader import inject_css, load_team_stats, load_outfield
-from utils.charts import team_dna_scatter, NAVY_CARD, GOLD, TEAL, WHITE, WHITE_DIM, BORDER, RED, NAVY, NAVY_MID, CONF_COLORS, _base_layout
 
+from utils.data_loader import inject_css, load_team_stats, load_outfield, team_style_label
+from utils.charts      import team_dna_scatter
+from utils.api_client  import flag, time_since_update
+
+# ── Streamlit Config ──────────────────────────────────────────
 st.set_page_config(
-    page_title="Team DNA · FIFA 2026",
-    page_icon="🧬",
+    page_title="Team Performance Analysis · FIFA 2026",
+    page_icon="⚽",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 inject_css()
 
 # ── Header ────────────────────────────────────────────────────
 st.markdown("""
-<div class="page-title-row">
-  <h1>🧬 Team DNA</h1>
-  <span class="live-badge"><span class="live-dot"></span>Team Analysis</span>
+<div class="page-hero">
+  <div class="ph-eyebrow">TEAM PROFILES</div>
+  <h1>Team Performance Analysis</h1>
+  <p class="ph-desc">
+    Aggregated player performance profiles by team to evaluate shot volume, conversion rates, and defensive metrics.
+  </p>
 </div>
-<p style="color:rgba(232,237,245,0.65); margin-top:-0.5rem; margin-bottom:1.5rem;">
-  Team-level performance profiles: shot volume, efficiency, defensive solidity,
-  and which nations punch above their weight.
-</p>
 """, unsafe_allow_html=True)
 
-# ── Load data ─────────────────────────────────────────────────
-with st.spinner("Aggregating team data…"):
-    team = load_team_stats()
+# ── Load Data ─────────────────────────────────────────────────
+with st.spinner(""):
+    teams = load_team_stats()
     players = load_outfield()
 
-# ── Sidebar filters ───────────────────────────────────────────
-with st.sidebar:
-    st.markdown("### ⚙️ Filters")
-    confs = ["All"] + sorted(team["confederation"].unique().tolist())
-    sel_conf = st.selectbox("Confederation", confs)
-    min_players = st.slider("Min squad size", 1, 15, 3)
-    sort_by = st.selectbox("Rank teams by",
-                           ["total_goals", "goals_per_shot", "total_shots",
-                            "avg_plus_minus", "total_interceptions"],
-                           format_func=lambda x: {
-                               "total_goals": "Total Goals",
-                               "goals_per_shot": "Conversion Rate",
-                               "total_shots": "Total Shots",
-                               "avg_plus_minus": "Avg ±/90",
-                               "total_interceptions": "Interceptions",
-                           }.get(x, x))
+# ── Controls ──────────────────────────────────────────────────
+st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
+col_ctrl1, col_ctrl2, col_ctrl3 = st.columns([3, 3, 2])
 
-# Apply filters
-fteam = team[team["players"] >= min_players].copy()
-if sel_conf != "All":
-    fteam = fteam[fteam["confederation"] == sel_conf]
+with col_ctrl1:
+    conf_options = ["All confederations"] + sorted(teams["confederation"].unique())
+    sel_conf = st.selectbox("Confederation filter:", conf_options)
+with col_ctrl2:
+    sort_metric = st.radio(
+        "Sort teams list by:",
+        ["Goals Scored", "Shot Conversion", "Total Shots Taken"],
+        horizontal=True,
+    )
+with col_ctrl3:
+    st.markdown(f"""
+    <div style="padding:.5rem 0; font-size:.8rem; color:#64748b;">
+      Updated: {time_since_update()}
+    </div>
+    """, unsafe_allow_html=True)
 
-# ── Top KPIs ──────────────────────────────────────────────────
-best_attack  = fteam.loc[fteam["total_goals"].idxmax()] if not fteam.empty else None
-best_convert = fteam.loc[fteam["goals_per_shot"].idxmax()] if not fteam.empty else None
-best_defend  = fteam.loc[fteam["avg_plus_minus"].idxmax()] if not fteam.empty else None
-most_shots   = fteam.loc[fteam["total_shots"].idxmax()] if not fteam.empty else None
+sort_col_map = {
+    "Goals Scored": "total_goals",
+    "Shot Conversion": "goals_per_shot",
+    "Total Shots Taken": "total_shots",
+}
+sort_field = sort_col_map[sort_metric]
 
-k1, k2, k3, k4 = st.columns(4)
-if best_attack is not None:
-    k1.metric("⚔️ Top Attack",     best_attack["team"],   f"{int(best_attack['total_goals'])} goals")
-    k2.metric("🎯 Most Clinical",  best_convert["team"],  f"{best_convert['goals_per_shot']:.1%} conv.")
-    k3.metric("🛡️ Best ±/90",     best_defend["team"],   f"{best_defend['avg_plus_minus']:+.2f}")
-    k4.metric("🔫 Most Shots",     most_shots["team"],    f"{int(most_shots['total_shots'])} shots")
+# Apply filter
+f_teams = teams.copy()
+if sel_conf != "All confederations":
+    f_teams = f_teams[f_teams["confederation"] == sel_conf]
 
-st.markdown("<hr>", unsafe_allow_html=True)
-
-# ── Main Scatter (DNA chart) ──────────────────────────────────
+# ── Top Performers Cards ──────────────────────────────────────
 st.markdown("""
-<div class="section-header">
-  <span class="section-icon">🗺️</span>
-  <h2>Team DNA Map</h2>
-  <span class="badge">Shots vs Goals</span>
-</div>
-<p style="color:rgba(232,237,245,0.55); font-size:0.88rem;">
-  X-axis: average shots per player (shot volume) · Y-axis: total goals scored ·
-  Bubble size: conversion rate (goals per shot).
-</p>
-""", unsafe_allow_html=True)
-
-st.plotly_chart(team_dna_scatter(fteam), use_container_width=True)
-
-st.markdown("<hr>", unsafe_allow_html=True)
-
-# ── Clinicality / Wastefulness Rankings ───────────────────────
-st.markdown("""
-<div class="section-header">
-  <span class="section-icon">⚡</span>
-  <h2>Clinicality Index</h2>
-  <span class="badge">Goals per Shot</span>
+<div class="clean-header">
+  <h2>Performance Leaders</h2>
 </div>
 """, unsafe_allow_html=True)
 
-tab_clin, tab_waste, tab_conf = st.tabs(["🎯 Most Clinical", "😤 Most Wasteful", "🌍 By Confederation"])
+best_atk = f_teams.loc[f_teams["total_goals"].idxmax()] if not f_teams.empty else None
+best_con = f_teams.loc[f_teams["goals_per_shot"].idxmax()] if not f_teams.empty else None
+best_sht = f_teams.loc[f_teams["total_shots"].idxmax()] if not f_teams.empty else None
 
-with tab_clin:
-    top_conv = fteam.nlargest(12, "goals_per_shot")[
-        ["team","confederation","total_goals","total_shots","goals_per_shot","players"]
-    ].reset_index(drop=True)
-    top_conv.index += 1
+if best_atk is not None:
+    col_k1, col_k2, col_k3 = st.columns(3)
+    with col_k1:
+        st.markdown(f"""
+        <div class="app-card" style="border-left: 4px solid #e01a22;">
+          <div class="app-card-title">Top Goal-Scoring Nation</div>
+          <div class="app-card-value">{int(best_atk['total_goals'])}</div>
+          <div style="font-weight:700; margin-top:0.5rem; font-size:0.95rem;">
+            {flag(best_atk['team'])} {best_atk['team']}
+          </div>
+          <div class="app-card-desc">Goals scored in the tournament</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_k2:
+        st.markdown(f"""
+        <div class="app-card" style="border-left: 4px solid #048a5f;">
+          <div class="app-card-title">Most Efficient Attack</div>
+          <div class="app-card-value">{best_con['goals_per_shot']:.0%}</div>
+          <div style="font-weight:700; margin-top:0.5rem; font-size:0.95rem;">
+            {flag(best_con['team'])} {best_con['team']}
+          </div>
+          <div class="app-card-desc">Shot conversion rate</div>
+        </div>
+        """, unsafe_allow_html=True)
+    with col_k3:
+        st.markdown(f"""
+        <div class="app-card" style="border-left: 4px solid #0f172a;">
+          <div class="app-card-title">Highest Shot Volume</div>
+          <div class="app-card-value">{int(best_sht['total_shots'])}</div>
+          <div style="font-weight:700; margin-top:0.5rem; font-size:0.95rem;">
+            {flag(best_sht['team'])} {best_sht['team']}
+          </div>
+          <div class="app-card-desc">Total shots taken</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    fig_clin = go.Figure(go.Bar(
-        x=[f"{r['team']}" for _, r in top_conv.iterrows()],
-        y=top_conv["goals_per_shot"],
-        marker=dict(
-            color=[CONF_COLORS.get(c, "#94a3b8") for c in top_conv["confederation"]],
-            opacity=0.85,
-            line=dict(width=0),
-        ),
-        customdata=np.stack([top_conv["team"], top_conv["total_goals"],
-                              top_conv["total_shots"], top_conv["confederation"]], axis=-1),
-        hovertemplate=(
-            "<b>%{customdata[0]}</b> · %{customdata[3]}<br>"
-            "Conversion: <b>%{y:.1%}</b><br>"
-            "Goals: %{customdata[1]} | Shots: %{customdata[2]}"
-            "<extra></extra>"
-        ),
-    ))
-    fig_clin.update_layout(
-        **_base_layout(
-            title=dict(text="Conversion Rate by Team (Goals per Shot)",
-                       font=dict(family="Outfit", size=16, color=WHITE)),
-            yaxis=dict(tickformat=".0%"),
-            height=400,
-        )
-    )
-    st.plotly_chart(fig_clin, use_container_width=True)
-
-with tab_waste:
-    bot_conv = fteam[fteam["total_shots"] > 5].nsmallest(12, "goals_per_shot")[
-        ["team","confederation","total_goals","total_shots","goals_per_shot","players"]
-    ].reset_index(drop=True)
-    bot_conv.index += 1
-
-    fig_waste = go.Figure(go.Bar(
-        x=[f"{r['team']}" for _, r in bot_conv.iterrows()],
-        y=bot_conv["goals_per_shot"],
-        marker=dict(color=RED, opacity=0.75, line=dict(width=0)),
-        hovertemplate=(
-            "<b>%{x}</b><br>Conversion: <b>%{y:.1%}</b><extra></extra>"
-        ),
-    ))
-    fig_waste.update_layout(
-        **_base_layout(
-            title=dict(text="Most Wasteful Teams (Lowest Conversion Rate)",
-                       font=dict(family="Outfit", size=16, color=WHITE)),
-            yaxis=dict(tickformat=".0%"),
-            height=400,
-        )
-    )
-    st.plotly_chart(fig_waste, use_container_width=True)
-
-with tab_conf:
-    conf_agg = fteam.groupby("confederation").agg(
-        teams=("team","count"),
-        total_goals=("total_goals","sum"),
-        total_shots=("total_shots","sum"),
-        avg_conversion=("goals_per_shot","mean"),
-        avg_plus_minus=("avg_plus_minus","mean"),
-    ).reset_index()
-    conf_agg["goals_per_shot_pct"] = conf_agg["avg_conversion"] * 100
-
-    fig_conf = go.Figure()
-    for _, row in conf_agg.iterrows():
-        fig_conf.add_trace(go.Bar(
-            name=row["confederation"],
-            x=[row["confederation"]],
-            y=[row["goals_per_shot_pct"]],
-            marker=dict(color=CONF_COLORS.get(row["confederation"], "#94a3b8"), opacity=0.85),
-            customdata=[[row["total_goals"], int(row["teams"]), row["avg_plus_minus"]]],
-            hovertemplate=(
-                f"<b>{row['confederation']}</b><br>"
-                "Avg Conversion: <b>%{y:.1f}%</b><br>"
-                "Total Goals: %{customdata[0][0]}<br>"
-                "Teams: %{customdata[0][1]}<br>"
-                "Avg ±/90: %{customdata[0][2]:+.2f}"
-                "<extra></extra>"
-            ),
-        ))
-    fig_conf.update_layout(
-        **_base_layout(
-            title=dict(text="Average Conversion Rate by Confederation",
-                       font=dict(family="Outfit", size=16, color=WHITE)),
-            showlegend=False,
-            height=380,
-            yaxis=dict(ticksuffix="%"),
-        )
-    )
-    st.plotly_chart(fig_conf, use_container_width=True)
-
-st.markdown("<hr>", unsafe_allow_html=True)
-
-# ── Full Team Table ───────────────────────────────────────────
+# ── Bubble scatter plot ───────────────────────────────────────
 st.markdown("""
-<div class="section-header">
-  <span class="section-icon">📋</span>
-  <h2>Full Team Stats</h2>
+<div class="clean-header">
+  <h2>Shot Volume vs Goals Scored Map</h2>
+</div>
+""", unsafe_allow_html=True)
+st.plotly_chart(team_dna_scatter(f_teams), width='stretch')
+
+# ── Dynamic Team Style Grid ───────────────────────────────────
+st.markdown("""
+<div class="clean-header">
+  <h2>Nations Profile Cards</h2>
 </div>
 """, unsafe_allow_html=True)
 
-search_team = st.text_input("🔍 Search team", placeholder="e.g. Brazil, France…")
+ranked_teams = f_teams.sort_values(sort_field, ascending=False).reset_index(drop=True)
 
-display = fteam.sort_values(sort_by, ascending=False).copy()
-if search_team:
-    display = display[display["team"].str.contains(search_team, case=False, na=False)]
+# Grid layout with 4 cards per row
+total_ranked = len(ranked_teams)
+for r_idx in range(0, min(total_ranked, 20), 4):
+    row_t = ranked_teams.iloc[r_idx : r_idx + 4]
+    row_cols = st.columns(4)
+    for c_idx, (_, t) in enumerate(row_teams := row_t.iterrows()):
+        style_txt = team_style_label(t["goals_per_shot"], t["total_shots"] / max(t["players"], 1))
+        conv_c = "#048a5f" if t["goals_per_shot"] > 0.18 else ("#e01a22" if t["goals_per_shot"] < 0.10 else "#0f172a")
+        with row_cols[c_idx]:
+            st.markdown(f"""
+            <div class="app-card" style="text-align:center;">
+              <div style="font-size:2rem; margin-bottom:0.25rem;">{flag(t['team'])}</div>
+              <div style="font-weight:800; font-size:1rem; color:#0f172a; margin-bottom:0.25rem;">{t['team']}</div>
+              <div style="font-size:0.7rem; color:#64748b; font-weight:700; text-transform:uppercase; margin-bottom:0.75rem;">
+                {t['confederation']}
+              </div>
+              <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap:0.5rem; text-align:center; border-top:1px solid #f1f5f9; padding-top:0.75rem;">
+                <div>
+                  <strong style="font-size:1rem;color:#0f172a;">{int(t['total_goals'])}</strong>
+                  <div style="font-size:0.65rem;color:#94a3b8;text-transform:uppercase;">goals</div>
+                </div>
+                <div>
+                  <strong style="font-size:1rem;color:{conv_c};">{t['goals_per_shot']:.0%}</strong>
+                  <div style="font-size:0.65rem;color:#94a3b8;text-transform:uppercase;">conv.</div>
+                </div>
+                <div>
+                  <strong style="font-size:1rem;color:#0f172a;">{int(t['total_shots'])}</strong>
+                  <div style="font-size:0.65rem;color:#94a3b8;text-transform:uppercase;">shots</div>
+                </div>
+              </div>
+              <div style="margin-top:0.75rem; font-size:0.75rem; font-weight:700; background:#f1f5f9; padding:0.3rem; border-radius:4px; color:#0f172a;">
+                {style_txt}
+              </div>
+            </div>
+            """, unsafe_allow_html=True)
 
-display["goals_per_shot_pct"] = (display["goals_per_shot"] * 100).round(1)
-display = display[[
-    "team","confederation","players","total_goals","total_assists",
-    "total_shots","goals_per_shot_pct","avg_plus_minus",
-    "total_interceptions","total_tackles_won","total_yellow","total_red"
-]].rename(columns={
-    "team":"Team","confederation":"Conf","players":"Squad",
-    "total_goals":"Goals","total_assists":"Assists","total_shots":"Shots",
-    "goals_per_shot_pct":"Conv%","avg_plus_minus":"Avg±/90",
-    "total_interceptions":"Intercept","total_tackles_won":"Tackles",
-    "total_yellow":"🟨","total_red":"🟥",
-}).reset_index(drop=True)
-display.index += 1
-display["Avg±/90"] = display["Avg±/90"].round(2)
-
-st.dataframe(
-    display,
-    use_container_width=True,
-    height=520,
-    column_config={
-        "Goals":   st.column_config.ProgressColumn("Goals", min_value=0,
-                      max_value=int(display["Goals"].max()) + 1),
-        "Conv%":   st.column_config.NumberColumn("Conv %", format="%.1f%%"),
-        "Avg±/90": st.column_config.NumberColumn("Avg ±/90", format="%+.2f"),
-    },
-)
-
+# ── Team Deep Dive spotlight ──────────────────────────────────
 st.markdown("""
-<hr>
-<p style="text-align:center; color:rgba(232,237,245,0.3); font-size:0.78rem;">
-  Team DNA · FIFA 2026 Intelligence Hub
-</p>
+<div class="clean-header">
+  <h2>Nation Spotlight Detail</h2>
+</div>
+""", unsafe_allow_html=True)
+
+spotlight_nations = sorted(f_teams["team"].tolist())
+spotlight_team = st.selectbox("Select nation to spotlight:", spotlight_nations)
+team_row = f_teams[f_teams["team"] == spotlight_team].iloc[0]
+team_players = players[players["team"] == spotlight_team].copy()
+
+if not team_players.empty:
+    style_label = team_style_label(team_row["goals_per_shot"], team_row["total_shots"] / max(team_row["players"], 1))
+    shots_pp = team_row["total_shots"] / max(team_row["players"], 1)
+
+    st.markdown(f"""
+    <div class="app-card">
+      <div style="display:flex; align-items:center; gap:1rem; margin-bottom:1rem;">
+        <span style="font-size:2.5rem;">{flag(spotlight_team)}</span>
+        <div>
+          <h3 style="margin:0; font-family:'Montserrat',sans-serif; font-size:1.3rem; text-transform:uppercase;">{spotlight_team}</h3>
+          <span style="font-size:0.8rem; font-weight:700; color:#048a5f;">{style_label}</span>
+        </div>
+      </div>
+      <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:1rem; text-align:center; border-top:1px solid #f1f5f9; padding-top:1rem;">
+        <div>
+          <div style="font-family:'Montserrat',sans-serif; font-weight:800; font-size:1.4rem; color:#e01a22;">{int(team_row['total_goals'])}</div>
+          <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase;">Goals</div>
+        </div>
+        <div>
+          <div style="font-family:'Montserrat',sans-serif; font-weight:800; font-size:1.4rem; color:#0f172a;">{team_row['goals_per_shot']:.0%}</div>
+          <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase;">Conversion</div>
+        </div>
+        <div>
+          <div style="font-family:'Montserrat',sans-serif; font-weight:800; font-size:1.4rem; color:#0f172a;">{int(team_row['total_shots'])}</div>
+          <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase;">Shots</div>
+        </div>
+        <div>
+          <div style="font-family:'Montserrat',sans-serif; font-weight:800; font-size:1.4rem; color:#0f172a;">{shots_pp:.1f}</div>
+          <div style="font-size:0.65rem; color:#94a3b8; text-transform:uppercase;">Shots / Player</div>
+        </div>
+      </div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Players table for this team
+    team_scorers = team_players[team_players["goals"] > 0].nlargest(5, "goals")[
+        ["player", "position", "goals", "assists", "goals_per90", "shots"]
+    ]
+    if not team_scorers.empty:
+        st.markdown(f"**Top scorers for {spotlight_team}:**")
+        team_scorers = team_scorers.rename(columns={
+            "player": "Player", "position": "Position", "goals": "Goals",
+            "assists": "Assists", "goals_per90": "Goals / 90", "shots": "Shots"
+        })
+        team_scorers["Goals / 90"] = team_scorers["Goals / 90"].round(2)
+        st.dataframe(team_scorers.reset_index(drop=True), hide_index=True, width='stretch', height=200)
+
+# ── Footer ────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="site-footer">
+  <div class="site-footer-brand">FIFA WC 2026 Stats</div>
+  <div>Team records are derived dynamically from active tournament registries</div>
+</div>
 """, unsafe_allow_html=True)

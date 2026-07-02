@@ -1,209 +1,222 @@
 """
-pages/1_xG_Engine.py — Expected Goals (xG) Engine
-FIFA 2026 Intelligence Hub
+pages/1_xG_Engine.py — Shot Quality & Expected Goals
+Comparing actual goals against model projections.
 """
 
 import streamlit as st
 import pandas as pd
 import numpy as np
-from utils.data_loader import inject_css, load_outfield
-from utils.ml_model import build_xg_model
-from utils.charts import xg_scatter, delta_bar
 
+from utils.data_loader import inject_css, load_outfield, performance_label
+from utils.ml_model    import build_xg_model
+from utils.charts      import xg_scatter, delta_bar
+from utils.api_client  import time_since_update, flag
+
+# ── Streamlit Config ──────────────────────────────────────────
 st.set_page_config(
-    page_title="xG Engine · FIFA 2026",
-    page_icon="🤖",
+    page_title="Shot Quality & Expected Goals · FIFA 2026",
+    page_icon="🎯",
     layout="wide",
+    initial_sidebar_state="expanded",
 )
 inject_css()
 
 # ── Header ────────────────────────────────────────────────────
 st.markdown("""
-<div class="page-title-row">
-  <h1>🤖 Expected Goals Engine</h1>
-  <span class="live-badge"><span class="live-dot"></span>ML Powered</span>
+<div class="page-hero">
+  <div class="ph-eyebrow">SHOOTING ANALYSIS</div>
+  <h1>Shot Quality &amp; Expected Goals</h1>
+  <p class="ph-desc">
+    This analysis compares the quality of chances each player gets (Expected Goals / xG) against what they actually score.
+  </p>
 </div>
-<p style="color:rgba(232,237,245,0.65); margin-top:-0.5rem; margin-bottom:1.5rem;">
-  Linear Regression trained on shot profiles to predict how many goals each player 
-  <em>should</em> score. Delta reveals who's lucky vs. elite.
-</p>
 """, unsafe_allow_html=True)
 
-# ── Load + model ──────────────────────────────────────────────
-with st.spinner("Training xG model…"):
-    raw   = load_outfield()
-    df    = build_xg_model(raw)
+# ── Methodology Explainer ─────────────────────────────────────
+with st.expander("📖 Explanation of Expected Goals (xG)"):
+    st.markdown("""
+    **Expected Goals (xG)** measures the quality of a shot based on features like position, accuracy, and shot volume.
+    - **Actual Goals > xG**: Player is scoring from low-quality positions or converting difficult chances (clinical).
+    - **Actual Goals < xG**: Player is getting good opportunities but failing to convert (unlucky/underperforming).
+    """)
 
-# ── Filters sidebar ───────────────────────────────────────────
-with st.sidebar:
-    st.markdown("### ⚙️ Filters")
-    min_shots = st.slider("Min shots taken", 0, 30, 3,
-                          help="Filter out players with very few shots")
-    min_mins  = st.slider("Min minutes played", 0, 600, 90)
-    positions = df["position"].dropna().unique().tolist()
-    sel_pos   = st.multiselect("Positions", positions, default=positions,
-                                help="Filter by playing position")
-    st.markdown("---")
-    st.markdown("**Model Info**")
-    st.caption("Features: shots, shots on target, 90s played, shots/90")
-    st.caption("Target: actual goals")
-    st.caption("Algorithm: Linear Regression (sklearn)")
+# ── Load and Model Data ───────────────────────────────────────
+with st.spinner(""):
+    raw = load_outfield()
+    df  = build_xg_model(raw)
+
+# ── Controls ──────────────────────────────────────────────────
+st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
+col_ctrl1, col_ctrl2, col_ctrl3 = st.columns([3, 3, 2])
+
+with col_ctrl1:
+    position_sel = st.radio(
+        "Player positions to display:",
+        ["All positions", "Forwards", "Midfielders"],
+        horizontal=True,
+    )
+with col_ctrl2:
+    shots_threshold = st.radio(
+        "Minimum shots taken:",
+        [3, 5, 10],
+        index=0,
+        horizontal=True,
+    )
+with col_ctrl3:
+    st.markdown(f"""
+    <div style="padding:.5rem 0; font-size:.8rem; color:#64748b;">
+      Updated: {time_since_update()}
+    </div>
+    """, unsafe_allow_html=True)
 
 # Apply filters
-mask = (
-    (df["shots"].fillna(0) >= min_shots) &
-    (df["minutes"].fillna(0) >= min_mins) &
-    (df["position"].isin(sel_pos) if sel_pos else True)
-)
-fdf = df[mask].copy()
+f_mask = df["shots"].fillna(0) >= shots_threshold
+if position_sel == "Forwards":
+    f_mask &= df["position"].str.contains("FW|ST|CF|LW|RW", case=False, na=False)
+elif position_sel == "Midfielders":
+    f_mask &= df["position"].str.contains("MF|CM|AM|DM", case=False, na=False)
 
-# ── Top KPIs ─────────────────────────────────────────────────
-total_xg    = fdf["xG"].sum()
-total_actual = fdf["goals"].sum()
-over_n  = (fdf["delta_g"] > 0.5).sum()
-under_n = (fdf["delta_g"] < -0.5).sum()
-best_finisher = fdf.loc[fdf["delta_g"].idxmax(), "player"] if not fdf.empty else "—"
+fdf = df[f_mask].copy()
 
-k1, k2, k3, k4, k5 = st.columns(5)
-k1.metric("Σ xG (Expected)", f"{total_xg:.1f}")
-k2.metric("Σ Actual Goals",  f"{total_actual:.0f}")
-k3.metric("xG Delta",  f"{total_actual - total_xg:+.1f}",
-          delta="Tournament over-performed" if total_actual > total_xg else "Under-performed")
-k4.metric("Over-performers", f"{over_n}")
-k5.metric("Under-performers",f"{under_n}")
+# ── KPIs ──────────────────────────────────────────────────────
+overperformers  = (fdf["delta_g"] > 0.5).sum()
+underperformers = (fdf["delta_g"] < -0.5).sum()
+sum_xg = fdf["xG"].sum()
+sum_actual = fdf["goals"].sum()
 
-st.markdown("<hr>", unsafe_allow_html=True)
-
-# ── Scatter Plot ──────────────────────────────────────────────
-st.markdown("""
-<div class="section-header">
-  <span class="section-icon">📍</span>
-  <h2>xG vs Actual Goals</h2>
-  <span class="badge">Scatter</span>
+st.markdown(f"""
+<div class="kpi-strip">
+  <div class="kpi-item">
+    <div class="ki-label">Players Analysed</div>
+    <div class="ki-value">{len(fdf)}</div>
+    <div class="ki-sub">matching selections</div>
+  </div>
+  <div class="kpi-item">
+    <div class="ki-label">Goals Scored</div>
+    <div class="ki-value">{int(sum_actual)}</div>
+    <div class="ki-sub">total actual goals</div>
+  </div>
+  <div class="kpi-item">
+    <div class="ki-label">Expected Goals (xG)</div>
+    <div class="ki-value">{sum_xg:.1f}</div>
+    <div class="ki-sub">expected sum total</div>
+  </div>
+  <div class="kpi-item">
+    <div class="ki-label">Overperforming xG</div>
+    <div class="ki-value" style="color:#048a5f;">{overperformers}</div>
+    <div class="ki-sub">players above expected</div>
+  </div>
+  <div class="kpi-item">
+    <div class="ki-label">Underperforming xG</div>
+    <div class="ki-value" style="color:#e01a22;">{underperformers}</div>
+    <div class="ki-sub">players below expected</div>
+  </div>
 </div>
 """, unsafe_allow_html=True)
 
-st.caption("Points **above** the dashed line = over-performers (better than expected). Below = under-performers. Bubble size = shots taken.")
-st.plotly_chart(xg_scatter(fdf), use_container_width=True)
-
-st.markdown("<hr>", unsafe_allow_html=True)
-
-# ── Leaderboards ──────────────────────────────────────────────
-tab_over, tab_under, tab_all = st.tabs(["🟢 Over-Performers", "🔴 Under-Performers", "📋 All Players"])
+# ── Tabs ──────────────────────────────────────────────────────
+tab_over, tab_under, tab_data = st.tabs([
+    "🟢 Over-performing Players",
+    "🔴 Under-performing Players",
+    "📋 Complete Dataset"
+])
 
 with tab_over:
     st.markdown("""
-    <div class="section-header">
-      <span class="section-icon">🟢</span>
+    <div class="clean-header">
       <h2>Clinical Finishers</h2>
-      <span class="badge">Top 10</span>
     </div>
-    <p style="color:rgba(232,237,245,0.55); font-size:0.88rem;">
-      These players score significantly more than their shot profile predicts — elite finishers.
-    </p>
     """, unsafe_allow_html=True)
-    st.plotly_chart(delta_bar(fdf, top_n=10, mode="over"), use_container_width=True)
 
-    over_table = (
-        fdf[fdf["delta_g"] > 0]
-        .nlargest(15, "delta_g")
-        [["player", "team", "position", "goals", "xG", "delta_g", "shots", "shots_on_target"]]
-        .rename(columns={"player":"Player","team":"Team","position":"Pos",
-                         "goals":"Goals","xG":"xG","delta_g":"Delta","shots":"Shots","shots_on_target":"SoT"})
-        .reset_index(drop=True)
-    )
-    over_table.index += 1
-    over_table["xG"]   = over_table["xG"].round(2)
-    over_table["Delta"] = over_table["Delta"].round(2)
-    st.dataframe(over_table, use_container_width=True, height=420,
-                 column_config={"Delta": st.column_config.NumberColumn("Delta ▲", format="%+.2f")})
+    over_players = fdf[fdf["delta_g"] > 0].nlargest(8, "delta_g")
+    for _, row in over_players.iterrows():
+        p_name = row["player"]
+        p_team = row["team"]
+        p_actual = int(row["goals"])
+        p_xg = row["xG"]
+        p_delta = row["delta_g"]
+
+        st.markdown(f"""
+        <div class="row-item">
+          <div class="row-item-main">
+            <span style="font-size:1.5rem;">{flag(p_team)}</span>
+            <div>
+              <div class="row-item-name">{p_name}</div>
+              <div class="row-item-meta">{p_team} · {row['position']} · {int(row['shots'])} shots</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:1.5rem;">
+            <div style="text-align:right;">
+              <div style="font-size:0.75rem; color:#64748b;">Goals / xG</div>
+              <div style="font-size:0.9rem; font-weight:600;">{p_actual} goals / {p_xg:.1f} xG</div>
+            </div>
+            <div class="row-item-value" style="color:#048a5f;">+{p_delta:.1f}</div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.plotly_chart(delta_bar(fdf, top_n=10, mode="over"), width='stretch')
 
 with tab_under:
     st.markdown("""
-    <div class="section-header">
-      <span class="section-icon">🔴</span>
-      <h2>Wasting Chances</h2>
-      <span class="badge">Bottom 10</span>
-    </div>
-    <p style="color:rgba(232,237,245,0.55); font-size:0.88rem;">
-      These players score far fewer goals than their chance creation warrants.
-    </p>
-    """, unsafe_allow_html=True)
-    st.plotly_chart(delta_bar(fdf, top_n=10, mode="under"), use_container_width=True)
-
-    under_table = (
-        fdf[fdf["delta_g"] < 0]
-        .nsmallest(15, "delta_g")
-        [["player", "team", "position", "goals", "xG", "delta_g", "shots", "shots_on_target"]]
-        .rename(columns={"player":"Player","team":"Team","position":"Pos",
-                         "goals":"Goals","xG":"xG","delta_g":"Delta","shots":"Shots","shots_on_target":"SoT"})
-        .reset_index(drop=True)
-    )
-    under_table.index += 1
-    under_table["xG"]    = under_table["xG"].round(2)
-    under_table["Delta"] = under_table["Delta"].round(2)
-    st.dataframe(under_table, use_container_width=True, height=420,
-                 column_config={"Delta": st.column_config.NumberColumn("Delta ▼", format="%+.2f")})
-
-with tab_all:
-    st.markdown("""
-    <div class="section-header">
-      <span class="section-icon">📋</span>
-      <h2>All Players — xG Data</h2>
+    <div class="clean-header">
+      <h2>Under-performing Players</h2>
     </div>
     """, unsafe_allow_html=True)
 
-    search = st.text_input("🔍 Search player", placeholder="e.g. Messi, Mbappe…")
-    all_table = fdf[["player","team","position","goals","xG","xA","delta_g","delta_a",
-                      "performance_score","shots","minutes"]].copy()
-    all_table.columns = ["Player","Team","Pos","Goals","xG","xA",
-                          "G Delta","A Delta","Perf Score","Shots","Mins"]
-    for c in ["xG","xA","G Delta","A Delta","Perf Score"]:
-        all_table[c] = all_table[c].round(2)
+    under_players = fdf[fdf["delta_g"] < 0].nsmallest(8, "delta_g")
+    for _, row in under_players.iterrows():
+        p_name = row["player"]
+        p_team = row["team"]
+        p_actual = int(row["goals"])
+        p_xg = row["xG"]
+        p_delta = row["delta_g"]
 
-    if search:
-        all_table = all_table[all_table["Player"].str.contains(search, case=False, na=False)]
+        st.markdown(f"""
+        <div class="row-item">
+          <div class="row-item-main">
+            <span style="font-size:1.5rem;">{flag(p_team)}</span>
+            <div>
+              <div class="row-item-name">{p_name}</div>
+              <div class="row-item-meta">{p_team} · {row['position']} · {int(row['shots'])} shots</div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; gap:1.5rem;">
+            <div style="text-align:right;">
+              <div style="font-size:0.75rem; color:#64748b;">Goals / xG</div>
+              <div style="font-size:0.9rem; font-weight:600;">{p_actual} goals / {p_xg:.1f} xG</div>
+            </div>
+            <div class="row-item-value" style="color:#e01a22;">{p_delta:.1f}</div>
+          </div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    all_table = all_table.sort_values("Goals", ascending=False).reset_index(drop=True)
-    all_table.index += 1
-    st.dataframe(all_table, use_container_width=True, height=520,
-                 column_config={
-                     "G Delta": st.column_config.NumberColumn("G Delta", format="%+.2f"),
-                     "A Delta": st.column_config.NumberColumn("A Delta", format="%+.2f"),
-                     "Perf Score": st.column_config.NumberColumn("Perf ⭐", format="%+.3f"),
-                 })
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.plotly_chart(delta_bar(fdf, top_n=10, mode="under"), width='stretch')
 
-# ── Methodology Note ──────────────────────────────────────────
-with st.expander("📖 Methodology & Model Details"):
+with tab_data:
     st.markdown("""
-    ### How the xG Model Works
-    
-    **Algorithm:** `sklearn.linear_model.LinearRegression` with `positive=True` constraint
-    (xG cannot be negative).
-    
-    **Input features (xG):**
-    - `shots` — total shots taken
-    - `shots_on_target` — shots requiring save or scoring
-    - `minutes_90s` — 90-minute blocks played (proxy for opportunity)
-    - `shots_per90` — shooting rate normalised to 90 minutes
-    
-    **Input features (xA):**
-    - `assists_per90`, `minutes_90s`, `goals_assists_per90`, `fouls`
-    
-    **Training:** Only players with at least 1 shot taken (avoids trivial zero rows).
-    
-    **Interpretation of Delta:**
-    - `delta_g = actual_goals − xG`
-    - **+ve** → player scores more than expected → clinical finisher
-    - **−ve** → player scores less than expected → unlucky or poor finisher
-    
-    **Limitations:** Linear Regression is intentionally simple for interpretability.
-    A production system would use gradient-boosted trees with shot location data.
-    """)
+    <div class="clean-header">
+      <h2>Tournament Dataset</h2>
+    </div>
+    """, unsafe_allow_html=True)
 
-st.markdown("""
-<hr>
-<p style="text-align:center; color:rgba(232,237,245,0.3); font-size:0.78rem;">
-  xG Engine · FIFA 2026 Intelligence Hub
-</p>
+    # Plotly Scatter view
+    st.plotly_chart(xg_scatter(fdf), width='stretch')
+
+    # Dataframe table
+    st.markdown("<br>", unsafe_allow_html=True)
+    tbl = fdf[["player", "team", "position", "goals", "xG", "delta_g", "shots", "minutes"]].copy()
+    tbl.columns = ["Player", "Nation", "Position", "Goals", "Expected Goals (xG)", "Difference (Goals-xG)", "Shots", "Minutes"]
+    tbl["Expected Goals (xG)"] = tbl["Expected Goals (xG)"].round(2)
+    tbl["Difference (Goals-xG)"] = tbl["Difference (Goals-xG)"].round(2)
+    st.dataframe(tbl.sort_values("Goals", ascending=False).reset_index(drop=True), width='stretch', height=400)
+
+# ── Footer ────────────────────────────────────────────────────
+st.markdown(f"""
+<div class="site-footer">
+  <div class="site-footer-brand">FIFA WC 2026 Stats</div>
+  <div>Model Type: Positive Linear Regression Model · Features: shots, minutes</div>
+</div>
 """, unsafe_allow_html=True)
