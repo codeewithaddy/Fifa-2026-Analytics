@@ -108,3 +108,4 @@ MIT License — see [LICENSE](LICENSE) for details.
 
 *Built with ☕ and data science. Not affiliated with FIFA.*
 # Fifa-2026-Analytics
+# Fifa-2026-Analytics
