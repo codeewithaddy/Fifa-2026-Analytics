@@ -1,0 +1,24 @@
+# ── Virtual environment ──
+venv/
+
+# ── Python cache ──
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ── Kaggle API credentials (NEVER commit) ──
+kaggle.json
+
+# ── Environment variables ──
+.env
+
+# ── Data files (auto-refreshed via Kaggle API) ──
+data/
+
+# ── OS / IDE artifacts ──
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+.vscode/
+.idea/
