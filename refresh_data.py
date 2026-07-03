@@ -31,7 +31,7 @@ CSV_NAME  = "players.csv"
 CACHE_FILE = DATA_DIR / "api_cache.json"
 
 # Kaggle dataset identifier
-KAGGLE_DATASET = "jahanavirshad/fifa-world-cup-2026-player-stats"
+KAGGLE_DATASET = "swaptr/fifa-wc-2026-players"
 KAGGLE_FILE    = "players.csv"
 
 
