@@ -9,18 +9,19 @@
 
 /* ── CSS Variables ────────────────────────────────────────── */
 :root {
-  --bg:          linear-gradient(180deg, #e9eff6 0%, #f4f6fb 100%);
-  --bg-card:     #ffffff;
-  --navy:        #0f2547; /* Elite Deep Navy */
-  --red:         #e01a22; /* Stadium Red */
-  --green:       #048a5f; /* Pitch Green */
-  --text:        #1e293b;
-  --text-muted:  #64748b;
-  --border:      rgba(15, 37, 71, 0.06);
-  --radius:      16px;
-  --radius-sm:   8px;
-  --shadow:      0 10px 30px -5px rgba(15, 37, 71, 0.05), 0 4px 6px -2px rgba(15, 37, 71, 0.03);
-  --shadow-hover: 0 20px 40px -10px rgba(15, 37, 71, 0.08), 0 8px 16px -4px rgba(15, 37, 71, 0.04);
+  --bg:          #f4f6f8; /* Very light gray/blue background */
+  --bg-card:     #ffffff; /* Pure white cards */
+  --navy:        #1e293b; /* Dark Slate for text headers */
+  --red:         #ef4444; /* Clean Red */
+  --green:       #10b981; /* Clean Green */
+  --blue:        #3b82f6; /* Modern Blue accent */
+  --text:        #334155;
+  --text-muted:  #94a3b8;
+  --border:      #e2e8f0; /* Subtle borders */
+  --radius:      12px;
+  --radius-sm:   6px;
+  --shadow:      0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  --shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
 }
 
 /* ── Reset / Base ─────────────────────────────────────────── */
@@ -40,11 +41,12 @@ html, body, [data-testid="stApp"] {
   z-index: 999990 !important;
 }
 
-/* Make collapsed control sidebar toggle button highly visible */
+/* Make collapsed control sidebar toggle button match light theme */
 [data-testid="collapsedControl"] {
-  background: var(--navy) !important;
-  color: #ffffff !important;
+  background: var(--bg-card) !important;
+  color: var(--navy) !important;
   border-radius: 8px !important;
+  border: 1px solid var(--border) !important;
   box-shadow: var(--shadow) !important;
   left: 1.5rem !important;
   top: 1rem !important;
@@ -57,56 +59,53 @@ html, body, [data-testid="stApp"] {
 }
 
 [data-testid="collapsedControl"] svg {
-  fill: #ffffff !important;
-  color: #ffffff !important;
+  fill: var(--navy) !important;
+  color: var(--navy) !important;
 }
 
 
 
 /* ── Sidebar Styling ──────────────────────────────────────── */
 [data-testid="stSidebar"] {
-  background: #0d1e36 !important;
-  border-right: none !important;
+  background: #ffffff !important;
+  border-right: 1px solid var(--border) !important;
 }
 
 [data-testid="stSidebar"] * {
-  color: rgba(255, 255, 255, 0.9) !important;
+  color: var(--navy) !important;
 }
 
 [data-testid="stSidebarNav"]::before {
   content: "FIFA WC 2026";
   display: block;
   font-family: 'Montserrat', sans-serif;
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   font-weight: 900;
-  letter-spacing: 0.15em;
-  text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.4) !important;
+  color: var(--navy) !important;
   padding: 1.5rem 1rem 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  margin-bottom: 1rem;
+  margin-bottom: 0.5rem;
 }
 
 [data-testid="stSidebarNav"] a {
   font-family: 'Inter', sans-serif !important;
-  font-size: 0.9rem !important;
-  color: rgba(255, 255, 255, 0.8) !important;
+  font-size: 0.95rem !important;
+  color: var(--text) !important;
   border-radius: var(--radius-sm) !important;
   transition: all 0.2s !important;
-  border-left: 4px solid transparent !important;
+  border-left: 3px solid transparent !important;
   padding-left: 0.75rem !important;
+  margin: 0.2rem 0 !important;
 }
 
 [data-testid="stSidebarNav"] a:hover {
-  background: rgba(255, 255, 255, 0.07) !important;
-  color: #ffffff !important;
-  border-left-color: var(--red) !important;
+  background: var(--bg) !important;
+  color: var(--blue) !important;
 }
 
 [data-testid="stSidebarNav"] a[aria-current="page"] {
-  background: rgba(224, 26, 34, 0.15) !important;
-  color: #ffffff !important;
-  border-left-color: var(--red) !important;
+  background: #eff6ff !important; /* light blue bg */
+  color: var(--blue) !important;
+  border-left-color: var(--blue) !important;
   font-weight: 600 !important;
 }
 
