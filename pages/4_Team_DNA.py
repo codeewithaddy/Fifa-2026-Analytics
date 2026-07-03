@@ -22,6 +22,8 @@ st.set_page_config(
 )
 inject_css()
 
+inject_css()
+
 # ── Header with Banner Image ──────────────────────────────────
 bg_path = "assets/fans_celebration.png"
 bg_tag = ""

@@ -24,6 +24,8 @@ st.set_page_config(
 )
 inject_css()
 
+inject_css()
+
 # ── Header with Banner Image ──────────────────────────────────
 bg_path = "assets/goal_projections.png"
 bg_tag = ""

@@ -25,6 +25,8 @@ st.set_page_config(
 )
 inject_css()
 
+inject_css()
+
 # ── Load Static Page Data (confederation cards, nav cards) ────
 with st.spinner(""):
     teams = load_team_stats()

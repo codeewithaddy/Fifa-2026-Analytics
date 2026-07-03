@@ -23,6 +23,8 @@ st.set_page_config(
 )
 inject_css()
 
+inject_css()
+
 # ── Header with Banner Image ──────────────────────────────────
 bg_path = "assets/players_matchup.png"
 bg_tag = ""
