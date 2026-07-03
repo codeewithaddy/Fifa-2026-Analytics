@@ -9,19 +9,27 @@
 
 /* ── CSS Variables ────────────────────────────────────────── */
 :root {
-  --bg:          #f4f6f8; /* Very light gray/blue background */
-  --bg-card:     #ffffff; /* Pure white cards */
-  --navy:        #1e293b; /* Dark Slate for text headers */
-  --red:         #ef4444; /* Clean Red */
-  --green:       #10b981; /* Clean Green */
-  --blue:        #3b82f6; /* Modern Blue accent */
-  --text:        #334155;
-  --text-muted:  #94a3b8;
-  --border:      #e2e8f0; /* Subtle borders */
-  --radius:      12px;
-  --radius-sm:   6px;
-  --shadow:      0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
-  --shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+  /* Stitch Design Tokens: VIBRANT LIGHT THEME */
+  --bg:          #f8fafc; /* Clean surface */
+  --bg-card:     #ffffff; /* Elevated surface */
+  
+  --primary:     #3b82f6; /* Vibrant Blue */
+  --primary-hover: #2563eb;
+  
+  --navy:        #0f172a; /* Slate 900 for high-contrast headers */
+  --text:        #334155; /* Slate 700 for readable body */
+  --text-muted:  #64748b; /* Slate 500 for secondary text */
+  
+  --red:         #ef4444; /* Alert/Negative */
+  --green:       #10b981; /* Success/Positive */
+  
+  --border:      #e2e8f0; /* Subtle element borders */
+  
+  --radius:      8px; /* ROUND_EIGHT */
+  --radius-sm:   4px;
+  
+  --shadow:      0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
 }
 
 /* ── Reset / Base ─────────────────────────────────────────── */
@@ -31,82 +39,9 @@ html, body, [data-testid="stApp"] {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif !important;
 }
 
-/* ── Hide Streamlit Elements ────────────────────────────── */
-#MainMenu, footer, [data-testid="stToolbar"], [data-testid="stDecoration"] {
+/* ── Streamlit Element Hiding (Minimal) ─────────────────── */
+#MainMenu, footer {
   display: none !important;
-}
-
-[data-testid="stHeader"] {
-  background: transparent !important;
-  z-index: 999990 !important;
-}
-
-/* Make collapsed control sidebar toggle button match light theme */
-[data-testid="collapsedControl"] {
-  background: var(--bg-card) !important;
-  color: var(--navy) !important;
-  border-radius: 8px !important;
-  border: 1px solid var(--border) !important;
-  box-shadow: var(--shadow) !important;
-  left: 1.5rem !important;
-  top: 1rem !important;
-  z-index: 999999 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  width: 40px !important;
-  height: 40px !important;
-}
-
-[data-testid="collapsedControl"] svg {
-  fill: var(--navy) !important;
-  color: var(--navy) !important;
-}
-
-
-
-/* ── Sidebar Styling ──────────────────────────────────────── */
-[data-testid="stSidebar"] {
-  background: #ffffff !important;
-  border-right: 1px solid var(--border) !important;
-}
-
-[data-testid="stSidebar"] * {
-  color: var(--navy) !important;
-}
-
-[data-testid="stSidebarNav"]::before {
-  content: "FIFA WC 2026";
-  display: block;
-  font-family: 'Montserrat', sans-serif;
-  font-size: 0.9rem;
-  font-weight: 900;
-  color: var(--navy) !important;
-  padding: 1.5rem 1rem 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-[data-testid="stSidebarNav"] a {
-  font-family: 'Inter', sans-serif !important;
-  font-size: 0.95rem !important;
-  color: var(--text) !important;
-  border-radius: var(--radius-sm) !important;
-  transition: all 0.2s !important;
-  border-left: 3px solid transparent !important;
-  padding-left: 0.75rem !important;
-  margin: 0.2rem 0 !important;
-}
-
-[data-testid="stSidebarNav"] a:hover {
-  background: var(--bg) !important;
-  color: var(--blue) !important;
-}
-
-[data-testid="stSidebarNav"] a[aria-current="page"] {
-  background: #eff6ff !important; /* light blue bg */
-  color: var(--blue) !important;
-  border-left-color: var(--blue) !important;
-  font-weight: 600 !important;
 }
 
 /* ── Typography ───────────────────────────────────────────── */
@@ -169,11 +104,12 @@ p  { font-family: 'Inter', sans-serif !important; line-height: 1.65 !important; 
   justify-content: space-between;
   height: 290px;
 }
-.premium-hero .hero-text {
+.premium-hero .hero-text, .premium-hero .hero-content {
   flex: 1;
   padding: 3rem;
   z-index: 2;
   position: relative;
+  width: 100%;
 }
 .premium-hero h1 {
   font-size: 2.8rem !important;
@@ -181,7 +117,7 @@ p  { font-family: 'Inter', sans-serif !important; line-height: 1.65 !important; 
   margin-bottom: 0.75rem !important;
   color: var(--navy) !important;
 }
-.premium-hero .sub {
+.premium-hero .sub, .premium-hero .hero-sub {
   color: #475569;
   font-size: 1.05rem;
   max-width: 550px;
@@ -200,6 +136,29 @@ p  { font-family: 'Inter', sans-serif !important; line-height: 1.65 !important; 
   height: 100%;
   object-fit: contain;
   object-position: bottom right;
+}
+
+/* Background images and overlays for Analytics Pages */
+.premium-hero img.bg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 0;
+}
+.premium-hero .overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+}
+.premium-hero .hero-content h1, .premium-hero .hero-content .hero-sub {
+  color: #ffffff !important;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
 }
 
 /* ── Custom Cards ─────────────────────────────────────────── */
@@ -483,6 +442,147 @@ p  { font-family: 'Inter', sans-serif !important; line-height: 1.65 !important; 
   font-family: 'Montserrat', sans-serif;
   font-weight: 800;
   text-transform: uppercase;
+}
+
+/* ── Premium Sidebar Navigation ───────────────────────────── */
+[data-testid="stSidebar"] {
+  background: var(--bg-card) !important;
+  border-right: 1px solid var(--border) !important;
+}
+[data-testid="stSidebarNav"]::before {
+  content: "FIFA WC 2026";
+  display: block;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 900;
+  color: var(--navy) !important;
+  padding: 1.5rem 1.5rem 0.5rem;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+[data-testid="stSidebarNav"] a {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.95rem !important;
+  color: var(--text) !important;
+  border-radius: var(--radius-sm) !important;
+  transition: all 0.2s !important;
+  border-left: 3px solid transparent !important;
+  padding-left: 1rem !important;
+  margin: 0.2rem 0.5rem !important;
+}
+[data-testid="stSidebarNav"] a:hover {
+  background: var(--bg) !important;
+  color: var(--primary) !important;
+}
+[data-testid="stSidebarNav"] a[aria-current="page"] {
+  background: #eff6ff !important;
+  color: var(--primary) !important;
+  border-left-color: var(--primary) !important;
+  font-weight: 700 !important;
+}
+
+/* ── Modern Tabs ──────────────────────────────────────────── */
+[data-baseweb="tab-list"] {
+  gap: 1rem !important;
+  border-bottom: 2px solid var(--border) !important;
+  margin-bottom: 1rem !important;
+}
+[data-baseweb="tab"] {
+  font-family: 'Montserrat', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 0.9rem !important;
+  color: var(--text-muted) !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0.5rem 0 !important;
+  text-transform: uppercase !important;
+}
+[data-baseweb="tab"][aria-selected="true"] {
+  color: var(--primary) !important;
+  border-bottom: 3px solid var(--primary) !important;
+}
+
+/* ── KPI Strip (Horizontal Data Cards) ────────────────────── */
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+.kpi-item {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  text-align: center;
+  transition: transform 0.2s;
+}
+.kpi-item:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+.ki-label {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+.ki-value {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--navy);
+  line-height: 1;
+}
+.ki-sub {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 0.5rem;
+}
+
+/* ── Row Items (Creative Lists) ───────────────────────────── */
+.row-item {
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+.row-item:hover {
+  transform: translateX(4px);
+  box-shadow: var(--shadow-hover);
+  border-color: var(--primary);
+}
+.row-item-main {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.row-item-name {
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 800;
+  font-size: 1.1rem;
+  color: var(--navy);
+}
+.row-item-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.row-item-value {
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 900;
 }
 
 /* ── Mobile responsiveness ────────────────────────────────── */

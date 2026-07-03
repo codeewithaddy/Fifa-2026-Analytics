@@ -81,6 +81,7 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
+
 # ── Quick Stats Strip + Live Matches: AUTO-REFRESHING FRAGMENT ───────────────
 # This fragment re-runs every 5 minutes automatically without full page reload
 @st.fragment(run_every=300)
@@ -229,53 +230,26 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 nav1, nav2, nav3, nav4 = st.columns(4)
+
 with nav1:
-    st.markdown("""
-    <div class="app-card" style="height:140px;">
-      <div class="app-card-title">Analysis Mode</div>
-      <strong style="font-size:1.1rem;color:#0f2547;">Shooting Analysis</strong>
-      <p style="font-size:0.8rem;color:#64748b;margin-top:0.25rem;">
-        Determines which players finish above or below their estimated chances.
-      </p>
-    </div>
-    """, unsafe_allow_html=True)
-    st.page_link("pages/1_xG_Engine.py", label="Open Shooting Analysis", width='stretch')
+    with st.container(border=True):
+        st.page_link("pages/1_xG_Engine.py", label="**Shooting Analysis**", icon="⚽")
+        st.caption("Determines which players finish above or below their estimated chances.")
 
 with nav2:
-    st.markdown("""
-    <div class="app-card" style="height:140px;">
-      <div class="app-card-title">Scouting Comparison</div>
-      <strong style="font-size:1.1rem;color:#0f2547;">Player Comparison</strong>
-      <p style="font-size:0.8rem;color:#64748b;margin-top:0.25rem;">
-        Side-by-side metric comparison and percentile indicators.
-      </p>
-    </div>
-    """, unsafe_allow_html=True)
-    st.page_link("pages/2_Player_Scout.py", label="Open Comparison Page", width='stretch')
+    with st.container(border=True):
+        st.page_link("pages/2_Player_Scout.py", label="**Player Comparison**", icon="🔍")
+        st.caption("Side-by-side metric comparison and percentile indicators.")
 
 with nav3:
-    st.markdown("""
-    <div class="app-card" style="height:140px;">
-      <div class="app-card-title">Scoring Projections</div>
-      <strong style="font-size:1.1rem;color:#0f2547;">Goal Projections</strong>
-      <p style="font-size:0.8rem;color:#64748b;margin-top:0.25rem;">
-        Projected final goal totals based on goals per game rates.
-      </p>
-    </div>
-    """, unsafe_allow_html=True)
-    st.page_link("pages/3_Golden_Boot.py", label="Open Projections Page", width='stretch')
+    with st.container(border=True):
+        st.page_link("pages/3_Golden_Boot.py", label="**Goal Projections**", icon="🏆")
+        st.caption("Projected final goal totals based on goals per game rates.")
 
 with nav4:
-    st.markdown("""
-    <div class="app-card" style="height:140px;">
-      <div class="app-card-title">Team Performance</div>
-      <strong style="font-size:1.1rem;color:#0f2547;">Team Performance</strong>
-      <p style="font-size:0.8rem;color:#64748b;margin-top:0.25rem;">
-        Analysis of aggregate shots vs actual goals per nation.
-      </p>
-    </div>
-    """, unsafe_allow_html=True)
-    st.page_link("pages/4_Team_DNA.py", label="Open Team Performance Page", width='stretch')
+    with st.container(border=True):
+        st.page_link("pages/4_Team_DNA.py", label="**Team Performance**", icon="📊")
+        st.caption("Analysis of aggregate shots vs actual goals per nation.")
 
 # ── Footer ────────────────────────────────────────────────────
 st.markdown(f"""
