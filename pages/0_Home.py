@@ -11,7 +11,8 @@ import pathlib
 from utils.data_loader  import inject_css, load_outfield, load_team_stats
 from utils.api_client   import (
     get_matches, get_groups, time_since_update, flag,
-    parse_completed_matches, parse_upcoming_matches, total_goals_from_matches
+    parse_completed_matches, parse_upcoming_matches,
+    total_goals_from_matches, get_current_round
 )
 from utils.ml_model import build_xg_model
 
@@ -24,24 +25,10 @@ st.set_page_config(
 )
 inject_css()
 
-# ── Load Live/Local Data ──────────────────────────────────────
+# ── Load Static Page Data (confederation cards, nav cards) ────
 with st.spinner(""):
-    df = load_outfield()
     teams = load_team_stats()
-    xg_df = build_xg_model(df)
-    raw_matches, _ = get_matches()
-    raw_groups, _  = get_groups()
-
-matches   = parse_completed_matches(raw_matches)
-upcoming  = parse_upcoming_matches(raw_matches)
-api_goals = total_goals_from_matches(matches)
-
-# Statistics normalization
-total_goals   = api_goals if api_goals > 0 else int(df["goals"].sum())
-total_assists = int(df["assists"].sum())
-total_players = len(df)
-total_teams   = df["team"].nunique()
-avg_goals     = round(total_goals / max(len(matches), 1), 2) if matches else round(df["goals_per90"].mean(), 2)
+    df    = load_outfield()
 
 # ── Header ────────────────────────────────────────────────────
 update_status = time_since_update("matches")
@@ -92,53 +79,100 @@ st.markdown(f"""
 </div>
 """, unsafe_allow_html=True)
 
-# ── Quick Stats Strip ─────────────────────────────────────────
-col1, col2, col3, col4, col5 = st.columns(5)
-with col1:
-    st.metric("Goals Scored", f"{total_goals}", help="Total goals from tracked players")
-with col2:
-    st.metric("Assists", f"{total_assists}")
-with col3:
-    st.metric("Tracked Players", f"{total_players}")
-with col4:
-    st.metric("Nations", f"{total_teams}")
-with col5:
-    st.metric("Avg Goals / Match", f"{avg_goals}")
+# ── Quick Stats Strip + Live Matches: AUTO-REFRESHING FRAGMENT ───────────────
+# This fragment re-runs every 5 minutes automatically without full page reload
+@st.fragment(run_every=300)
+def live_section():
+    raw_matches, _ = get_matches()
+    raw_groups, _  = get_groups()
+    matches  = parse_completed_matches(raw_matches)
+    upcoming = parse_upcoming_matches(raw_matches)
+    api_goals = total_goals_from_matches(matches)
 
-# ── Live Matches (Match Card Mockup UI) ───────────────────────
-st.markdown("""
-<div class="clean-header">
-  <h2>Recent Matches</h2>
-  <span class="tag">Match Outcomes</span>
-</div>
-""", unsafe_allow_html=True)
+    df_live = load_outfield()
+    total_goals   = api_goals if api_goals > 0 else int(df_live["goals"].sum())
+    total_assists = int(df_live["assists"].sum())
+    total_players = len(df_live)
+    total_teams   = df_live["team"].nunique()
+    avg_goals     = round(total_goals / max(len(matches), 1), 2) if matches else round(df_live["goals_per90"].mean(), 2)
+    current_round = get_current_round()
 
-if matches:
-    for match in matches[:3]:
-        home_flag = flag(match["home"])
-        away_flag = flag(match["away"])
-        st.markdown(f"""
-        <div class="live-match-row">
-          <div style="display:flex; align-items:center; gap:1.5rem; flex:1;">
-            <div class="live-badge" style="background:rgba(15,37,71,0.06); color:#0f2547; border-color:rgba(15,37,71,0.12);">
-              Match Center
+    # ── Quick Stats Strip ───────────────────────────────────────────────
+    col1, col2, col3, col4, col5 = st.columns(5)
+    with col1:
+        st.metric("Goals Scored", f"{total_goals}", help="Total goals from all completed matches")
+    with col2:
+        st.metric("Assists", f"{total_assists}")
+    with col3:
+        st.metric("Tracked Players", f"{total_players}")
+    with col4:
+        st.metric("Nations", f"{total_teams}")
+    with col5:
+        st.metric("Avg Goals / Match", f"{avg_goals}")
+
+    # ── Recent Matches ───────────────────────────────────────────────────
+    st.markdown(f"""
+    <div class="clean-header">
+      <h2>Recent Matches</h2>
+      <span class="tag">{current_round}</span>
+    </div>
+    """, unsafe_allow_html=True)
+
+    recent = sorted(matches, key=lambda m: m.get("date", ""), reverse=True)[:5]
+    if recent:
+        for match in recent:
+            home_flag = flag(match["home"])
+            away_flag = flag(match["away"])
+            st.markdown(f"""
+            <div class="live-match-row">
+              <div style="display:flex; align-items:center; gap:1.5rem; flex:1;">
+                <div class="live-badge" style="background:rgba(15,37,71,0.06); color:#0f2547; border-color:rgba(15,37,71,0.12);">
+                  {match.get('stage', 'Match')}
+                </div>
+                <span style="font-size:1.05rem; font-weight:700;">
+                  {home_flag} {match['home']}
+                  <span style="color:#e01a22; margin:0 0.5rem; font-family:Montserrat,sans-serif; font-size:1.3rem;">
+                    {match['home_score']} – {match['away_score']}
+                  </span>
+                  {match['away']} {away_flag}
+                </span>
+              </div>
+              <div style="font-size:0.82rem; color:#94a3b8; font-weight:600;">Completed</div>
             </div>
-            <strong style="font-size:0.85rem; color:#64748b; text-transform:uppercase; min-width:100px;">
-              {match['stage']}
-            </strong>
-            <span style="font-size:1.05rem; font-weight:700;">
-              {home_flag} {match['home']}  
-              <span style="color:#e01a22; margin:0 0.5rem; font-family:Montserrat,sans-serif; font-size:1.3rem;">
-                {match['home_score']} – {match['away_score']}
-              </span>
-              {match['away']} {away_flag}
-            </span>
-          </div>
-          <div style="font-size:0.82rem; color:#94a3b8; font-weight:600;">Completed</div>
+            """, unsafe_allow_html=True)
+    else:
+        st.info("No match results available yet.")
+
+    # ── Upcoming Fixtures ────────────────────────────────────────────
+    if upcoming:
+        st.markdown("""
+        <div class="clean-header">
+          <h2>Upcoming Fixtures</h2>
+          <span class="tag">Next Matches</span>
         </div>
         """, unsafe_allow_html=True)
-else:
-    st.info("No match results available yet.")
+        for match in upcoming[:4]:
+            home_flag = flag(match["home"])
+            away_flag = flag(match["away"])
+            date_label = match.get("date", "").split(" ")[0] if match.get("date") else ""
+            st.markdown(f"""
+            <div class="live-match-row">
+              <div style="display:flex; align-items:center; gap:1.5rem; flex:1;">
+                <div class="live-badge" style="background:rgba(224,26,34,0.08); color:#e01a22; border-color:rgba(224,26,34,0.2);">
+                  {match.get('stage', 'Match')}
+                </div>
+                <span style="font-size:1.05rem; font-weight:700;">
+                  {home_flag} {match['home']}
+                  <span style="color:#94a3b8; margin:0 0.75rem; font-size:1rem;">vs</span>
+                  {match['away']} {away_flag}
+                </span>
+              </div>
+              <div style="font-size:0.82rem; color:#94a3b8; font-weight:600;">{date_label}</div>
+            </div>
+            """, unsafe_allow_html=True)
+
+live_section()
+
 
 # ── Confederation Cards (Mockup Leagues Grid) ─────────────────
 st.markdown("""

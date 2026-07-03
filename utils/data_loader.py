@@ -12,6 +12,30 @@ import streamlit as st
 ROOT      = pathlib.Path(__file__).parent.parent
 DATA_PATH = ROOT / "data" / "players.csv"
 
+# ── Canonical team name mapping ───────────────────────────────────────────────
+# Maps CSV / API variant names → the single canonical name used everywhere
+# (flags dict, confederation map, page titles, etc.)
+TEAM_NAME_MAP: dict[str, str] = {
+    # CSV variants → canonical
+    "Korea Republic":               "South Korea",
+    "IR Iran":                      "Iran",
+    "Türkiye":                      "Turkey",
+    "Côte d'Ivoire":                "Ivory Coast",
+    "C\u00f4te d'Ivoire":           "Ivory Coast",
+    "Bosnia&Herz":                  "Bosnia and Herzegovina",
+    "Bosnia–Herz":                  "Bosnia and Herzegovina",
+    "Bosnia-Herzegovina":           "Bosnia and Herzegovina",
+    "Cabo Verde":                   "Cape Verde",
+    "Czechia":                      "Czech Republic",
+    "Cura\u00e7ao":                 "Curacao",
+    "Curaçao":                      "Curacao",
+    "DR Congo":                     "Congo DR",
+    "Democratic Republic of the Congo": "Congo DR",
+    "Congo, DR":                    "Congo DR",
+    "USA":                          "United States",
+    "UAE":                          "United Arab Emirates",
+}
+
 
 # ── CSS Injector ──────────────────────────────────────────────
 def inject_css() -> None:
@@ -32,15 +56,22 @@ def _parse_age(val) -> float | None:
 
 
 # ── Raw load ──────────────────────────────────────────────────
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_raw() -> pd.DataFrame:
+    """Load raw CSV and normalise team names to canonical form."""
     df = pd.read_csv(DATA_PATH, low_memory=False)
     df["age"] = df["age"].apply(_parse_age)
+    # Normalise team names so flags, confederation map, and display all match
+    df["team"] = df["team"].map(lambda t: TEAM_NAME_MAP.get(str(t).strip(), str(t).strip()))
+    if "team_country" in df.columns:
+        df["team_country"] = df["team_country"].map(
+            lambda t: TEAM_NAME_MAP.get(str(t).strip(), str(t).strip())
+        )
     return df
 
 
 # ── Outfield players (non-GK, minutes > 0) ───────────────────
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_outfield() -> pd.DataFrame:
     df = load_raw()
     df = df[df["minutes"].notna() & (df["minutes"] > 0)].copy()
@@ -57,7 +88,7 @@ def load_outfield() -> pd.DataFrame:
 
 
 # ── Goalkeepers ───────────────────────────────────────────────
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_goalkeepers() -> pd.DataFrame:
     df = load_raw()
     gk = df[df["gk_games_starts"].fillna(0) > 0].copy()
@@ -75,7 +106,7 @@ def load_goalkeepers() -> pd.DataFrame:
 
 
 # ── Team aggregates ───────────────────────────────────────────
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def load_team_stats() -> pd.DataFrame:
     df = load_outfield()
     agg = df.groupby("team").agg(
@@ -127,7 +158,7 @@ def load_team_stats() -> pd.DataFrame:
     return agg
 
 
-@st.cache_data(ttl=3600, show_spinner=False)
+@st.cache_data(ttl=300, show_spinner=False)
 def player_list() -> list[str]:
     return sorted(load_outfield()["player"].unique().tolist())
 
@@ -153,5 +184,20 @@ def team_style_label(goals_per_shot: float, shots_per_player: float) -> str:
 
 
 # ── Tournament constants ──────────────────────────────────────
-MAX_GAMES    = 7
-GAMES_PLAYED = 3   # approximate — updated as tournament progresses
+MAX_GAMES = 7
+
+
+def get_games_played() -> int:
+    """
+    Dynamically determine how many group-stage games have been played
+    by reading the api_cache.json instead of relying on a hardcoded number.
+    """
+    try:
+        from utils.api_client import get_games_played_count
+        return get_games_played_count()
+    except Exception:
+        return 3
+
+
+# Backwards-compatible constant (lazy — evaluated at import time)
+GAMES_PLAYED = 3  # kept for any direct imports; prefer get_games_played()

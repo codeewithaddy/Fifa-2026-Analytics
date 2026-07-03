@@ -12,10 +12,11 @@ services:
       - key: PYTHON_VERSION
         value: 3.11.0
 
+  # Refresh Kaggle player stats CSV every 6 hours during active tournament
   - type: cron
-    name: fifa-daily-data-refresh
+    name: fifa-data-refresh-6h
     runtime: python
-    schedule: "0 0 * * *"   # Every day at midnight UTC
+    schedule: "0 */6 * * *"   # Every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
     buildCommand: pip install -r requirements.txt
     startCommand: python refresh_data.py
     envVars:

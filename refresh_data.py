@@ -1,18 +1,19 @@
 """
-refresh_data.py — Daily Kaggle data refresh
-FIFA 2026 Intelligence Hub
+refresh_data.py — Data refresh for FIFA 2026 Intelligence Hub
+Downloads the latest players.csv from Kaggle and updates the cache timestamp.
 
 Usage (local):
   .\venv\Scripts\python.exe refresh_data.py
 
 Usage (Render cron):
   Set KAGGLE_USERNAME and KAGGLE_KEY as environment variables on the Render dashboard.
-  Run as a daily cron job at midnight UTC.
+  Runs every 6 hours via render.yaml cron job.
 """
 
 import os
 import sys
-import zipfile
+import json
+import time
 import shutil
 import pathlib
 import logging
@@ -27,10 +28,11 @@ log = logging.getLogger(__name__)
 ROOT      = pathlib.Path(__file__).parent
 DATA_DIR  = ROOT / "data"
 CSV_NAME  = "players.csv"
+CACHE_FILE = DATA_DIR / "api_cache.json"
 
-# Kaggle dataset identifier (update if dataset changes)
+# Kaggle dataset identifier
 KAGGLE_DATASET = "jahanavirshad/fifa-world-cup-2026-player-stats"
-KAGGLE_FILE    = "players.csv"  # exact filename inside the zip
+KAGGLE_FILE    = "players.csv"
 
 
 def setup_kaggle_credentials() -> bool:
