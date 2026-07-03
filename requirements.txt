@@ -1,5 +1,6 @@
 altair==6.2.2
 kaggle>=2.2.3
+kagglehub[pandas-datasets]
 anyio==4.14.1
 attrs==26.1.0
 blinker==1.9.0
