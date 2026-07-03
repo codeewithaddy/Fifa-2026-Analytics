@@ -84,6 +84,7 @@ def load_raw() -> pd.DataFrame:
         )
     except Exception as e:
         if DATA_PATH.exists():
+            st.warning("⚠️ Could not fetch live data from Kaggle. Using static fallback file (`data/players.csv`).")
             df = pd.read_csv(DATA_PATH, low_memory=False)
         else:
             st.error(f"**Critical Error: Failed to fetch Kaggle Data!**\n\nEnsure you added Kaggle credentials to the Streamlit Cloud Secrets.\n\n**Error:**\n```\n{e}\n```")
