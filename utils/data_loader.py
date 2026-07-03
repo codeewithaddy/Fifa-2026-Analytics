@@ -55,10 +55,53 @@ def _parse_age(val) -> float | None:
     return float(m.group(1)) if m else None
 
 
+# ── Data Fetcher (No Cron Job Needed) ─────────────────────────
+@st.cache_resource(ttl=21600, show_spinner=False)
+def _auto_fetch_kaggle_data():
+    """
+    Runs automatically every 6 hours (21600s).
+    This eliminates the need for an external Render Cron Job!
+    """
+    import subprocess
+    import sys
+    import os
+    
+    env = os.environ.copy()
+    try:
+        import streamlit as st
+        if "KAGGLE_API_TOKEN" in st.secrets:
+            env["KAGGLE_API_TOKEN"] = st.secrets["KAGGLE_API_TOKEN"]
+        if "KAGGLE_USERNAME" in st.secrets:
+            env["KAGGLE_USERNAME"] = st.secrets["KAGGLE_USERNAME"]
+        if "KAGGLE_KEY" in st.secrets:
+            env["KAGGLE_KEY"] = st.secrets["KAGGLE_KEY"]
+    except Exception:
+        pass
+
+    try:
+        res = subprocess.run(
+            [sys.executable, str(ROOT / "refresh_data.py")],
+            check=True,
+            capture_output=True,
+            text=True,
+            env=env
+        )
+        return True, res.stdout
+    except subprocess.CalledProcessError as e:
+        return False, e.stderr
+    except Exception as e:
+        return False, str(e)
+
 # ── Raw load ──────────────────────────────────────────────────
 @st.cache_data(ttl=300, show_spinner=False)
 def load_raw() -> pd.DataFrame:
     """Load raw CSV and normalise team names to canonical form."""
+    success, msg = _auto_fetch_kaggle_data()
+    
+    if not DATA_PATH.exists():
+        st.error(f"**Critical Error: Failed to fetch Kaggle Data!**\n\nEnsure you added your `KAGGLE_API_TOKEN` to the Streamlit Cloud Secrets. \n\n**Subprocess Error:**\n```\n{msg}\n```")
+        st.stop()
+        
     df = pd.read_csv(DATA_PATH, low_memory=False)
     df["age"] = df["age"].apply(_parse_age)
     # Normalise team names so flags, confederation map, and display all match

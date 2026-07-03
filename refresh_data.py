@@ -37,36 +37,44 @@ KAGGLE_FILE    = "players.csv"
 
 def setup_kaggle_credentials() -> bool:
     """
-    Configure Kaggle API from environment variables OR from kaggle.json.
+    Configure Kaggle API from environment variables OR from streamlit secrets.
     Returns True if credentials are available.
     """
-    username = os.environ.get("KAGGLE_USERNAME")
-    key      = os.environ.get("KAGGLE_KEY")
-
-    if username and key:
-        # Set env vars for kaggle library
-        os.environ["KAGGLE_USERNAME"] = username
-        os.environ["KAGGLE_KEY"]      = key
-        log.info("Kaggle credentials loaded from environment variables.")
+    # 1. Try new Kaggle OAuth Token format
+    token = os.environ.get("KAGGLE_API_TOKEN")
+    
+    # 2. Try falling back to Streamlit secrets (for Community Cloud)
+    if not token:
+        try:
+            import streamlit as st
+            if "KAGGLE_API_TOKEN" in st.secrets:
+                token = st.secrets["KAGGLE_API_TOKEN"]
+        except Exception:
+            pass
+            
+    if token:
+        os.environ["KAGGLE_API_TOKEN"] = token
+        log.info("Kaggle credentials loaded via KAGGLE_API_TOKEN.")
         return True
 
-    # Fallback: local kaggle.json
-    kaggle_json = ROOT / "kaggle.json"
-    if kaggle_json.exists():
-        import json
-        with open(kaggle_json) as f:
-            creds = json.load(f)
-        os.environ["KAGGLE_USERNAME"] = creds.get("username", "")
-        os.environ["KAGGLE_KEY"]      = creds.get("key", "")
-        log.info("Kaggle credentials loaded from kaggle.json.")
-        return bool(creds.get("username") and creds.get("key"))
+    # 3. Try legacy KAGGLE_USERNAME / KAGGLE_KEY
+    username = os.environ.get("KAGGLE_USERNAME")
+    key      = os.environ.get("KAGGLE_KEY")
+    if not username or not key:
+        try:
+            import streamlit as st
+            username = st.secrets.get("KAGGLE_USERNAME")
+            key      = st.secrets.get("KAGGLE_KEY")
+        except Exception:
+            pass
 
-    log.error(
-        "No Kaggle credentials found!\n"
-        "Either:\n"
-        "  (a) Set KAGGLE_USERNAME and KAGGLE_KEY environment variables, or\n"
-        "  (b) Place your kaggle.json file in the project root directory."
-    )
+    if username and key:
+        os.environ["KAGGLE_USERNAME"] = username
+        os.environ["KAGGLE_KEY"]      = key
+        log.info("Kaggle credentials loaded via USERNAME/KEY.")
+        return True
+
+    log.error("No Kaggle credentials found! Please set KAGGLE_API_TOKEN.")
     return False
 
 
